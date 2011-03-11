@@ -1,0 +1,6 @@
+.bundle
+.idea
+*.swp
+log/*
+tmp/*
+
