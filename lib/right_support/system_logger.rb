@@ -15,9 +15,12 @@ module RightSupport
     SYSLOG_LEVELS = LOGGER_LEVELS.invert
     DEFAULT_SYSLOG_LEVEL = :alert
 
+    DEFAULT_OPTIONS = {:split=>false, :color=>false}
+
     @@syslog = nil
 
-    def initialize(program_name='ruby')
+    def initialize(program_name='ruby', options={})
+      @options = DEFAULT_OPTIONS.merge(options)
       @level = Logger::DEBUG
       @@syslog ||= Syslog.open(program_name)
     end
@@ -39,7 +42,9 @@ module RightSupport
         end
       end
 
-      return emit_syslog(severity, message)
+      parts = clean(message)
+      parts.each { |part| emit_syslog(severity, part) }
+      return true
     end
 
     def <<(msg)
@@ -54,8 +59,7 @@ module RightSupport
 
     def emit_syslog(severity, message)
       level = SYSLOG_LEVELS[severity] || DEFAULT_SYSLOG_LEVEL
-      parts = clean(message)
-      parts.each { |part| @@syslog.send(level, part) }
+      @@syslog.send(level, message)
       return true
     end
 
@@ -63,8 +67,18 @@ module RightSupport
       message = message.to_s.dup
       message.strip!
       message.gsub!(/%/, '%%') # syslog(3) freaks on % (printf)
-      message.gsub!(/\e\[[^m]*m/, '') # remove useless ansi color codes
-      return message.split(/[\n\r]+/)
+
+      unless @options[:color]
+        message.gsub!(/\e\[[^m]*m/, '') # remove useless ansi color codes
+      end
+
+      if @options[:split]
+        bits = message.split(/[\n\r]+/)
+      else
+        bits = [message]
+      end
+
+      return bits
     end
 
   end
