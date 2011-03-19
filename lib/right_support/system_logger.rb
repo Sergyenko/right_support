@@ -22,7 +22,11 @@ module RightSupport
     def initialize(program_name='ruby', options={})
       @options = DEFAULT_OPTIONS.merge(options)
       @level = Logger::DEBUG
-      @@syslog ||= Syslog.open(program_name)
+
+      facility = options[:facility] || 'local0'
+      fac_map = {'user'=>8}
+      (0..7).each { |i| fac_map['local'+i.to_s] = 128+8*i }
+      @@syslog ||= Syslog.open(program_name, nil, fac_map[facility.to_s])
     end
 
     def add(severity, message = nil, progname = nil, &block)
