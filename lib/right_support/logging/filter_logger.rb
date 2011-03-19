@@ -1,4 +1,4 @@
-module RightScale
+module RightSupport::Logging
   class FilterLogger < Logger
     def initialize(actual_logger)
       @actual_logger = actual_logger
