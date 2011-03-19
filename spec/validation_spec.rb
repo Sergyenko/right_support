@@ -26,6 +26,39 @@ s3EiH2z+zbSO+cnMtCutdRKIHk3wy6tyRKOq0EMafA==
 -----END RSA PRIVATE KEY-----
 EOF
 
+GOOD_ENCRYPTED_PEM_PRIV = <<EOF
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-EDE3-CBC,61C0BBB816A708D4
+
+SQ/Y+U7z51OL/hx4YnfVPl6uqsOjpSjU2w4NFqB6EyBtMFgOoqW6ryuIi6ycHgWJ
+YabUlMPdnexU+1BGqu9P2M9kQejfVddBFmbE09s54dwamk7q6RjaARN0UvHq6Ms9
+r5/nqRBrinWtOeU/+7cV5qGp2/HbWC2bHAUCCwBcq+ymEpLOw/dpHpxjuiB5ZOLt
+QzcEJ8ePlNDYvPxw4Wjvb5IDjS4MSoJfA5Y2ZXwVSI1d7mhx4Cekx3CkTMWKYIU8
+FS6hO39tfPTcxb4os3FYl8D8TlRHv5atrsptKqYE4DKhZhoDA5yFbFJHZlEp+G6H
+t+snMyuzEWNWq3wGI/gaglatUMq6airA50qticbw8kvz+67pPh2gkAgMXBHEGgPW
+m0xnqaWf+MyQCUfaxjvxAq68Ced+H9ULLYFrzWAIuSh1M+QartuvP1ZOIcDpY83i
+RybTJC5MLgGE0COM7oOtPfXO/rvdf6jqTr54HhYwq18aWrqjnacZi0JzNEFRtpNa
+5FNbwbQGT4Y8J1rOgbyjrd712oRhfjMAU39w4b6gEIATB4zDnMVkdb/Rde/nB7i4
+CqDB9iSEbtQN4Ev5fXpIDrmhbdT/CURpzRvIt68x08qvX8KQwqDbLz39luocApxN
+lnTihGiYAiNflMpDvhNL8MSLxYgL5Or2KVF/Ppc+1Qw23BEYDlaRRzc71PWdrVr8
+UxEdFtqQnnthO7PabrwmLiPeArIGL4U8wrbXA3GbkbDtClftWMaC9JrzVJvXp1z7
+sXZPhdZzSCg3n3ZbAGKYUx/G8AHojLKfAF3BHufnU9qM+6TS/KtTnhrvHSgYPcBn
+etI7DWZ/mUnLwnsWfiQ3n5PeeUq/nU+IFJT+Y3r+TfFVCiGPW60XpfLzH1U4otKq
+KaEnCQX6S7p1Jinx+FHL9fg1I50E6QUNO+N8XO4ay3Jzumz2yjZeudyt+uy954Hq
+RfmDGYImqrkYrzd8d6hNUTBGnUfUTvq2k/orKhvcxtX+tr9WhNshnJcK18SgBRKT
+6XLybyioikVSpUGsL95kIhrspryO8v7/M1igWWrLu9fe/jUJLCFzlbGSRYDn+QTp
+z7qpbBvxHPgu1fKurZ96nCcigVxQgY5rPwpQvG+mkD6YOhgDvSAjTos7Fagz6nb6
+01MufCVvFx+BBZEsol0Ag23RhXeJXvxkcF//hcPseCA/oB9Aqzyu+ml9mgp4v6P+
+AgVopgGCfZR31CQ2b9AxdSARFCj2AFE9AdeNy268KSx8wLWAlzUcnGi57eK8WJM3
+KTDOwJZDgZkjYyMZATpxOj8w3euAflQjQmyXpN1/Q0BW66Mj9+XzVk2yEpF2S0iE
+xKzPcNEzlGMo1xo6mqVE/kIuRSodXuGp5Eoo8ITvpYWcSdtCTSKJNxAUqry/k9bg
+9sf3jSmSHzUd92pdM02p8A42HcaPGLmbuFjIfZPK7KoYmIdhJqy7s08CFUlk9XI/
+PxdYph5J4WkAbeomPGUTFxEWV1cM2lvW4hotrx8MS50WLVZxxY1p7D+JxN3KeJyc
+mytYpg2dxr8UF64NFKuyEmunkDTdYH2Oi7B7mAcw/QlBN+qCARP+tA==
+-----END RSA PRIVATE KEY-----
+EOF
+
 GOOD_SSH_PUB = <<EOF
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEApfGJ2lzcKgWq50u4yhZyP7yDjA4\
 CF2pV19TUOlXg4a40FCuKi7JIqPCyixmrWYrvRFz+5zY+gHWOHkCfjNaDryUgPs\
@@ -57,6 +90,9 @@ describe RightSupport::Validation do
   context :pem_private_key? do
     it 'recognizes valid keys' do
       RightSupport::Validation.pem_private_key?(GOOD_PEM_PRIV).should == true
+    end
+    it 'considers encrypted keys to be "bad" (not usable)' do
+      RightSupport::Validation.pem_private_key?(GOOD_ENCRYPTED_PEM_PRIV).should == false      
     end
     it 'recognizes bad keys' do
       RightSupport::Validation.pem_private_key?(corrupt(GOOD_PEM_PRIV)).should == false

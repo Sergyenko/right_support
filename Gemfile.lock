@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    right_support (0.5.0)
+    right_support (0.6.0)
       net-ssh (~> 2.0)
       rack (>= 1.0)
 

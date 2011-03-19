@@ -5,7 +5,7 @@ module RightSupport::Validation
   module Crypto
     def pem_private_key?(key_material)
       return false if key_material.nil? || key_material.empty?
-      key = OpenSSL::PKey::RSA.new(key_material)
+      key = OpenSSL::PKey::RSA.new(key_material, 'foobario')
       return key.private?
     rescue OpenSSL::PKey::PKeyError, NotImplementedError
       return false
