@@ -18,6 +18,7 @@ spec = Gem::Specification.new do |s|
   s.description = %q{A toolkit of useful foundation code: logging, input validation, that sort of thing.}
 
   s.add_runtime_dependency('rack', [">= 1.0"])
+  s.add_runtime_dependency('net-ssh', ["~> 2.0"])
 
   s.add_development_dependency('rspec', ["~> 1.3"])
   s.add_development_dependency('flexmock', ["~> 0.8"])
