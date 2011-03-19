@@ -1,7 +1,7 @@
 require 'syslog'
 require 'logger'
 
-module RightSupport::Logging
+module RightSupport
   class SystemLogger < Logger
     LOGGER_LEVELS = {
       UNKNOWN => :alert,

@@ -1,4 +1,4 @@
-module RightSupport::Logging
+module RightSupport
   class TagLogger < FilterLogger
     def filter(severity, message)
       @tls_id ||= "tag_logger_#{self.object_id}"

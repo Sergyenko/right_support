@@ -1,4 +1,4 @@
-module RightSupport::Logging
+module RightSupport
   class FilterLogger < Logger
     def initialize(actual_logger)
       @actual_logger = actual_logger
@@ -6,7 +6,7 @@ module RightSupport::Logging
 
     def add(severity, message = nil, progname = nil, &block)
       severity ||= UNKNOWN
-      return true if severity < @level
+      return true if severity < level
 
       if message.nil?
         if block_given?
@@ -22,6 +22,10 @@ module RightSupport::Logging
 
     def <<(msg)
       @actual_logger << msg
+    end
+
+    def level
+      @actual_logger.level
     end
 
     def close
