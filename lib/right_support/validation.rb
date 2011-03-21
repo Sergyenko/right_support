@@ -20,9 +20,6 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-require 'openssl'
-require 'net/ssh'
-
 module RightSupport
   # The Validation module acts as a namespace for various submodules that provide
   # validation functions. These submodules can be mixed into classes in order to
