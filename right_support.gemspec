@@ -17,13 +17,11 @@ spec = Gem::Specification.new do |s|
   s.summary = %q{Reusable foundation code.}
   s.description = %q{A toolkit of useful foundation code: logging, input validation, etc.}
 
-  s.add_runtime_dependency('net-ssh', ["~> 2.0"])
-
   s.add_development_dependency('ruby-debug', [">= 0.10"])
   s.add_development_dependency('rspec', ["~> 1.3"])
   s.add_development_dependency('flexmock', ["~> 0.8"])
 
   basedir = File.dirname(__FILE__)
-  candidates = ['right_support.gemspec', 'MIT-LICENSE', 'README.rdoc'] + Dir['lib/**/*']
+  candidates = ['right_support.gemspec', 'LICENSE', 'README.rdoc'] + Dir['lib/**/*']
   s.files = candidates.sort
 end
