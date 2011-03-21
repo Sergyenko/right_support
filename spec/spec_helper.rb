@@ -14,3 +14,9 @@ def read_fixture(fn)
   fixtures_dir = File.join($basedir, 'spec', 'fixtures')
   File.read(File.join(fixtures_dir, fn))
 end
+
+def corrupt(key, factor=4)
+  d = key.size / 2
+
+  key[0..(d-factor)] + key[d+factor..-1]
+end

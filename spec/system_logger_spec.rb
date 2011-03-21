@@ -1,6 +1,10 @@
 require 'spec_helper'
 
-describe RightSupport::SystemLogger do
+describe 'RightSupport::SystemLogger' do
+  before(:each) do
+    pending('unsupported on this platform') unless defined?(RightSupport::SystemLogger)
+  end
+
   it 'escapes % characters to avoid confusing printf()' do
     @logger = RightSupport::SystemLogger.new('spec')
     flexmock(@logger).should_receive(:emit_syslog).with(Integer, 'All systems 100%% -- %%licious!')

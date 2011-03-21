@@ -1,5 +1,5 @@
 require 'spec_helper'
 
 describe RightSupport::TagLogger do
-  it 'should be tested'
+  it 'has test coverage'
 end
