@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'right_support'
-  s.version = '0.7.0'
-  s.date    = '2011-03-20'
+  s.version = '0.7.1'
+  s.date    = '2011-03-26'
 
   s.authors = ['Tony Spataro']
   s.email   = 'tony@rightscale.com'
