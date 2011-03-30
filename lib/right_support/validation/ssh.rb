@@ -62,7 +62,7 @@ if_require_succeeds('net/ssh') do
         return false if key_material.nil? || key_material.empty?
         ::Net::SSH::KeyFactory.load_data_public_key(key_material)
         return true
-      rescue ::OpenSSL::PKey::PKeyError, NotImplementedError
+      rescue ::Net::SSH::Exception, ::OpenSSL::PKey::PKeyError, NotImplementedError
         return false
       end
     end

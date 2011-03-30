@@ -31,6 +31,7 @@ describe RightSupport::Validation::SSH do
       RightSupport::Validation.ssh_public_key?('ssh-rsa AAAAB3Nhowdybob').should == false
       RightSupport::Validation.ssh_public_key?('ssh-rsa hello there').should == false
       RightSupport::Validation.ssh_public_key?('ssh-rsa one two three! user@host').should == false
+      RightSupport::Validation.ssh_public_key?('fafafafafafa mumumumumumu').should == false
       RightSupport::Validation.ssh_public_key?(nil).should == false
       RightSupport::Validation.ssh_public_key?('').should == false
     end

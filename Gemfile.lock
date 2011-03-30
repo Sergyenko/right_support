@@ -1,8 +1,7 @@
 PATH
   remote: .
   specs:
-    right_support (0.6.3)
-      net-ssh (~> 2.0)
+    right_support (0.7.1)
 
 GEM
   remote: http://rubygems.org/
@@ -12,6 +11,7 @@ GEM
     linecache (0.43)
     linecache (0.43-x86-mswin32)
     net-ssh (2.1.3)
+    rake (0.8.7)
     rspec (1.3.1)
     ruby-debug (0.10.4)
       columnize (>= 0.1)
@@ -27,6 +27,8 @@ PLATFORMS
 
 DEPENDENCIES
   flexmock (~> 0.8)
+  net-ssh (~> 2.0)
+  rake (>= 0.8.7)
   right_support!
   rspec (~> 1.3)
   ruby-debug (>= 0.10)
