@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'right_support'
-  s.version = '0.7.1'
-  s.date    = '2011-03-26'
+  s.version = '0.8.0'
+  s.date    = '2011-04-09'
 
   s.authors = ['Tony Spataro']
   s.email   = 'tony@rightscale.com'
@@ -22,6 +22,7 @@ spec = Gem::Specification.new do |s|
   s.add_development_dependency('rspec', ["~> 1.3"])
   s.add_development_dependency('flexmock', ["~> 0.8"])
   s.add_development_dependency('net-ssh', ["~> 2.0"])
+  s.add_development_dependency('rest-client', ["~> 1.6"])
 
   basedir = File.dirname(__FILE__)
   candidates = ['right_support.gemspec', 'LICENSE', 'README.rdoc'] + Dir['lib/**/*']

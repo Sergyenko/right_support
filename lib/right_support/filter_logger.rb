@@ -42,9 +42,9 @@ module RightSupport
     # to the underlying logger's #add method.
     #
     # === Parameters
-    # p1(Object):: PARAM_DESC
-    # p1(Object):: PARAM_DESC
-    # p1(Object):: PARAM_DESC
+    # severity(Integer):: one of the Logger severity constants
+    # message(String):: the message to log, or nil
+    # progname(String):: the program name, or nil
     #
     # === Block
     # If message == nil and a block is given, yields to the block in order to
@@ -52,7 +52,7 @@ module RightSupport
     # the severity and message are still filtered.
     #
     # === Return
-    # RETURN_DESC
+    # the result of the underlying logger's #add
     def add(severity, message = nil, progname = nil, &block)
       severity ||= UNKNOWN
       return true if severity < level

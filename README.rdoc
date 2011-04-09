@@ -19,4 +19,48 @@ or where the log entries go.
   require 'right_support/rack/custom_logger'
 
   my_logger = MyAwesomeLogger.new
-  use RightSupport::Rack::CustomLogger, Logger::INFO, my_logger 
+  use RightSupport::Rack::CustomLogger, Logger::INFO, my_logger
+
+== Input Validation
+
+The Validation module contains several format-checkers that can be used to validate
+your web app's models before saving, check for preconditions in your controllers, and
+so forth.
+
+You can use it as a mixin by including the appropriate child module of
+RightSupport::Validation, but you really don't want to do that, do you? Instead, you
+want to call the module methods of RightSupport::Validation, which contains all of
+the same mixin methods.
+
+  the_key = STDIN.read
+  raise ArgumentError unless RightSupport::Validation.ssh_public_key?(the_key)
+
+== Request Balancing
+
+The RequestBalancer class will randomly choose endpoints for a network request,
+which lets you perform easy client-side load balancing:
+
+  include RightSupport::Net
+
+  urls = ['http://localhost', 'http://otherhost']
+  RequestBalancer.request(urls, :fatal=>RestClient::ResourceNotFound) do |url|
+    REST.get(url)
+  end
+
+The balancer will keep trying requests until one of them succeeds without throwing
+any exceptions. (NB: a nil return value counts as success!!)
+
+== HTTP REST Client
+
+ We provide a very thin wrapper around the rest-client gem that enables simple but
+ robust rest requests with a timeout, headers, etc. 
+
+ The RightSupport::Net::REST module is interface-compatible with the RestClient
+ module, but allows an optional timeout to be specified as an extra parameter.
+
+   # Default timeout is 5 seconds
+   RightSupport::Net::REST.get('http://localhost')
+
+   # Make sure the REST request fails after 1 second so we can report an error
+   # and move on!
+   RightSupport::Net::REST.get('http://localhost', {'X-Hello'=>'hi!'}, 1)
