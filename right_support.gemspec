@@ -20,6 +20,7 @@ spec = Gem::Specification.new do |s|
   s.add_development_dependency('rake', [">= 0.8.7"])
   s.add_development_dependency('ruby-debug', [">= 0.10"])
   s.add_development_dependency('rspec', ["~> 1.3"])
+  s.add_development_dependency('cucumber', ["~> 0.8"])
   s.add_development_dependency('flexmock', ["~> 0.8"])
   s.add_development_dependency('net-ssh', ["~> 2.0"])
   s.add_development_dependency('rest-client', ["~> 1.6"])

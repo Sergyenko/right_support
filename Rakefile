@@ -1,10 +1,11 @@
 # -*-ruby-*-
 require 'rubygems'
 require 'rake'
-require 'spec/rake/spectask'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/clean'
+require 'spec/rake/spectask'
+require 'cucumber/rake/task'
 
 desc "Run unit tests"
 task :default => :spec
@@ -15,6 +16,11 @@ Spec::Rake::SpecTask.new do |t|
   t.spec_opts = lambda do
     IO.readlines(File.join(File.dirname(__FILE__), 'spec', 'spec.opts')).map {|l| l.chomp.split " "}.flatten
   end
+end
+
+desc "Run functional tests"
+Cucumber::Rake::Task.new do |t|
+  t.cucumber_opts = %w{--color --format pretty}
 end
 
 desc 'Generate documentation for the rightscale_foundation gem.'

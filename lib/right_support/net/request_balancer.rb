@@ -31,8 +31,9 @@ module RightSupport::Net
           result = yield(host)
           break
         rescue Exception => e
-          fatal     = @options[:fatal]
-          raise e if fatal && e.kind_of?(fatal)
+          fatal = @options[:fatal] || StandardError
+          safe  = @options[:safe]
+          raise e if e.kind_of?(fatal) && !(safe && e.kind_of?(safe))
         end
       end
 
