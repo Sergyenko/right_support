@@ -29,11 +29,12 @@ module RightSupport::Net
       @endpoints.each do |host|
         begin
           result = yield(host)
-          break
+          break unless result.nil?
         rescue Exception => e
           fatal = @options[:fatal]
           safe  = @options[:safe]
           raise e if (fatal && e.kind_of?(fatal)) && !(safe && e.kind_of?(safe))
+          exception = e
         end
       end
 

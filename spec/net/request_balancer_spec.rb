@@ -1,5 +1,7 @@
 require 'spec_helper'
 
+class TestException < Exception; end
+
 describe RightSupport::Net::RequestBalancer do
   context :initialize do
     it 'requires a list of endpoint URLs' do
@@ -56,6 +58,15 @@ describe RightSupport::Net::RequestBalancer do
           nil
         end
       end.should raise_exception(RightSupport::Net::NoResponse)
+    end
+
+    it 'raises rescued exception if all endpoints fail to provide a result but some raise an exception' do
+      lambda do
+        RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
+          raise TestException, "Fall down go boom!" if l == 2
+          nil
+        end
+      end.should raise_exception(TestException)
     end
   end
 end
