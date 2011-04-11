@@ -1,6 +1,8 @@
 require 'spec_helper'
 
 class TestException < Exception; end
+class BigDeal < TestException; end
+class NoBigDeal < BigDeal; end
 
 describe RightSupport::Net::RequestBalancer do
   context :initialize do
@@ -8,6 +10,36 @@ describe RightSupport::Net::RequestBalancer do
       lambda do
         RightSupport::Net::RequestBalancer.new(nil)
       end.should raise_exception(ArgumentError)
+    end
+
+    context 'with :fatal option' do
+      it 're-raises exceptions of the fatal class' do
+        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>BigDeal)
+        tries = 0
+        lambda do
+          rb.request do |l|
+            tries += 1
+            raise BigDeal
+          end
+        end.should raise_error(BigDeal)
+
+        tries.should == 1
+      end
+    end
+
+    context 'with :fatal and :safe options' do
+      it 'does not re-raise exceptions of the safe class' do
+        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>BigDeal, :safe=>NoBigDeal)
+        tries = 0
+        lambda do
+          rb.request do |l|
+            tries += 1
+            raise NoBigDeal
+          end
+        end.should raise_error(NoBigDeal)
+
+        tries.should == 3
+      end
     end
   end
 
@@ -39,7 +71,24 @@ describe RightSupport::Net::RequestBalancer do
       seen.size.should >= 50
     end
 
-    it 'returns the first successful result' do
+    it 'retries when the result is nil' do
+      list = [1,2,3,4,5,6,7,8,9,10]
+
+      10.times do
+        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
+          if (l == 5)
+            l
+          else
+            nil
+          end
+        end
+
+        x.should == 5
+      end
+
+    end
+    
+    it 'retries when an exception is raised' do
       list = [1,2,3,4,5,6,7,8,9,10]
 
       10.times do
