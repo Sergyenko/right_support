@@ -31,8 +31,6 @@ module RightSupport::Net
       request(:method=>:delete, :url=>url, :timeout=>timeout, :headers=>headers, &block)
     end
 
-    protected
-
     def self.request(options, &block)
       if HAS_REST_CLIENT
         RestClient::Request.execute(options, &block)
