@@ -5,9 +5,9 @@ RightSupport is a library of reusable, unit-tested Ruby code that RightScale has
 === Logging
 
 SystemLogger is a rewrite of the seattle.rb SyslogLogger class that features the following improvements:
- * Contains several bugfixes vs. SyslogLogger 1.4.0
- * Inherits from standard Ruby Logger class for guaranteed compatibility
- * Can be configured with options about how to handle newlines, ANSI escape codes, etc
+* Contains several bugfixes vs. SyslogLogger 1.4.0
+* Inherits from standard Ruby Logger class for guaranteed compatibility
+* Can be configured with options about how to handle newlines, ANSI escape codes, etc
 
   @logger = SystemLogger.new('my_cool_app', :split=>true, :color=>false)
   @logger.info "Hello world\nThis will appear on separate lines\nand without \e[33;0mbeautiful colors" 
@@ -28,9 +28,19 @@ your web app's models before saving, check for preconditions in your controllers
 so forth.
 
 You can use it as a mixin by including the appropriate child module of
-RightSupport::Validation, but you really don't want to do that, do you? Instead, you
-want to call the module methods of RightSupport::Validation, which contains all of
-the same mixin methods.
+RightSupport::Validation.
+
+  class AwesomenessGenerator < ActiveRecord::Base
+    include RightSupport::Validation::OpenSSL
+
+    before_save do |record|
+      errors[:foo] = 'Hey, that's not a key!' unless pem_public_key?(record.foo)
+    end
+  end
+
+But you really don't want to do that, do you? Instead, you want to call the module
+methods of RightSupport::Validation, which contains all of the same mixin methods,
+but does not pollute the dispatch table of your application classes.
 
   the_key = STDIN.read
   raise ArgumentError unless RightSupport::Validation.ssh_public_key?(the_key)
@@ -48,7 +58,9 @@ which lets you perform easy client-side load balancing:
   end
 
 The balancer will keep trying requests until one of them succeeds without throwing
-any exceptions. (NB: a nil return value counts as success!!)
+any exceptions. (NB: a nil return value counts as success!!) If you specify that a
+certain class of exception is "fatal," then that exception will cause REST to re-
+raise immediately
 
 == HTTP REST Client
 
