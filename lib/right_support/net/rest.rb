@@ -1,4 +1,8 @@
 module RightSupport::Net
+  begin
+    require 'right_http_connection' 
+  rescue LoadError
+  end
   if_require_succeeds('restclient') do
     HAS_REST_CLIENT = true
   end
