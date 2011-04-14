@@ -25,11 +25,13 @@ end
 
 desc 'Generate documentation for the rightscale_foundation gem.'
 Rake::RDocTask.new(:rdoc) do |rdoc|
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'rightscale_foundation'
+  rdoc.rdoc_dir = 'doc'
+  rdoc.title    = 'RightSupport'
   rdoc.options << '--line-numbers' << '--inline-source'
   rdoc.rdoc_files.include('README.rdoc')
   rdoc.rdoc_files.include('lib/**/*.rb')
+  rdoc.rdoc_files.exclude('features/**/*')
+  rdoc.rdoc_files.exclude('spec/**/*')
 end
 
 desc "Build rightscale_foundation gem"

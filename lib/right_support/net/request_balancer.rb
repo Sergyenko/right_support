@@ -24,8 +24,8 @@ module RightSupport::Net
     # endpoints(Array):: a set of network endpoints (e.g. HTTP URLs) to be load-balanced
     #
     # === Options
-    # :fatal:: a Class, subclass of Exception, which is considered "fatal" and causes #request to re-raise immediately
-    # :safe:: a Class, subclass of :fatal, which is considered "safe" even though its parent class is fatal 
+    # fatal(Class):: a subclass of Exception that is considered fatal and causes #request to re-raise immediately
+    # safe(Class):: a subclass of :fatal that is considered "safe" even though its parent class is fatal
     def initialize(endpoints, options={})
       raise ArgumentError, "Must specify at least one endpoint" unless endpoints && !endpoints.empty?
       @endpoints = endpoints.shuffle

@@ -1,4 +1,4 @@
-RightSupport is a library of reusable, unit-tested Ruby code that RightScale has found broadly useful.
+RightSupport is a library of reusable, unit- and functional-tested Ruby code that RightScale has found broadly useful.
 
 == What Does It Do?
 
@@ -8,6 +8,9 @@ SystemLogger is a rewrite of the seattle.rb SyslogLogger class that features the
 * Contains several bugfixes vs. SyslogLogger 1.4.0
 * Inherits from standard Ruby Logger class for guaranteed compatibility
 * Can be configured with options about how to handle newlines, ANSI escape codes, etc
+
+It is very similar to SystemLogger, with a few differences (e.g. it is a child class of Logger instead of
+merely being duck-type compatible). You use it as follows.
 
   @logger = SystemLogger.new('my_cool_app', :split=>true, :color=>false)
   @logger.info "Hello world\nThis will appear on separate lines\nand without \e[33;0mbeautiful colors" 

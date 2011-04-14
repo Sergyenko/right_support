@@ -54,9 +54,9 @@ module RightSupport
       # options(Hash):: (optional) configuration options to use, see below
       #
       # === Options
-      # :facility:: the syslog facility to use for messages, 'local0' by default
-      # :split(true|false):: if true, splits multi-line messages into separate syslog entries
-      # :color(true|false):: if true, passes ANSI escape sequences through to syslog
+      # facility:: the syslog facility to use for messages, 'local0' by default
+      # split(true|false):: if true, splits multi-line messages into separate syslog entries
+      # color(true|false):: if true, passes ANSI escape sequences through to syslog
       #
       def initialize(program_name='ruby', options={})
         @options = DEFAULT_OPTIONS.merge(options)

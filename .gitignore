@@ -1,6 +1,7 @@
 .bundle
 .idea
 *.swp
+doc/*
 log/*
 tmp/*
 pkg/*
