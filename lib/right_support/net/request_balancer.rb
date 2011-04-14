@@ -1,4 +1,6 @@
 module RightSupport::Net
+  # Raised to indicate the (uncommon) error condition where a RequestBalancer rotated
+  # through EVERY URL in a list without getting a non-nil, non-timeout response. 
   class NoResponse < Exception; end
 
   # Utility class that allows network requests to be randomly distributed across
@@ -14,12 +16,35 @@ module RightSupport::Net
       new(endpoints, options).request(&block)
     end
 
+    # Constructor. Accepts a sequence of request endpoints which it shuffles randomly at
+    # creation time; however, the ordering of the endpoints does not change thereafter
+    # and the sequence is tried from the beginning for every request.
+    #
+    # === Parameters
+    # endpoints(Array):: a set of network endpoints (e.g. HTTP URLs) to be load-balanced
+    #
+    # === Options
+    # :fatal:: a Class, subclass of Exception, which is considered "fatal" and causes #request to re-raise immediately
+    # :safe:: a Class, subclass of :fatal, which is considered "safe" even though its parent class is fatal 
     def initialize(endpoints, options={})
       raise ArgumentError, "Must specify at least one endpoint" unless endpoints && !endpoints.empty?
       @endpoints = endpoints.shuffle
       @options = options.dup
     end
 
+    # Perform a request
+    #
+    # === Block
+    # This method requires a block, to which it yields in order to perform the actual network
+    # request. If the block raises an exception or provides nil, the balancer proceeds to try
+    # the next URL in the list.
+    #
+    # === Raise
+    # ArgumentError:: if a block isn't supplied
+    # NoResponse:: if *every* URL in the list times out or returns nil
+    #
+    # === Return
+    # Return the first non-nil value provided by the block.
     def request
       raise ArgumentError, "Must call this method with a block" unless block_given?
 
