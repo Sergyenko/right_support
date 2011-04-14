@@ -67,11 +67,11 @@ raise immediately
 
 == HTTP REST Client
 
- We provide a very thin wrapper around the rest-client gem that enables simple but
- robust rest requests with a timeout, headers, etc. 
+We provide a very thin wrapper around the rest-client gem that enables simple but
+robust rest requests with a timeout, headers, etc.
 
- The RightSupport::Net::REST module is interface-compatible with the RestClient
- module, but allows an optional timeout to be specified as an extra parameter.
+The RightSupport::Net::REST module is interface-compatible with the RestClient
+module, but allows an optional timeout to be specified as an extra parameter.
 
    # Default timeout is 5 seconds
    RightSupport::Net::REST.get('http://localhost')
