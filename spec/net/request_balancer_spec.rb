@@ -1,6 +1,7 @@
 require 'spec_helper'
 
 class TestException < Exception; end
+class OtherTestException < Exception; end
 class BigDeal < TestException; end
 class NoBigDeal < BigDeal; end
 
@@ -36,7 +37,7 @@ describe RightSupport::Net::RequestBalancer do
             tries += 1
             raise NoBigDeal
           end
-        end.should raise_error(NoBigDeal)
+        end.should raise_error(RightSupport::Net::NoResponse, /NoBigDeal/)
 
         tries.should == 3
       end
@@ -71,23 +72,6 @@ describe RightSupport::Net::RequestBalancer do
       seen.size.should >= 50
     end
 
-    it 'retries when the result is nil' do
-      list = [1,2,3,4,5,6,7,8,9,10]
-
-      10.times do
-        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
-          if (l == 5)
-            l
-          else
-            nil
-          end
-        end
-
-        x.should == 5
-      end
-
-    end
-    
     it 'retries when an exception is raised' do
       list = [1,2,3,4,5,6,7,8,9,10]
 
@@ -101,10 +85,10 @@ describe RightSupport::Net::RequestBalancer do
       end
     end
 
-    it 'raises if all endpoints fail to provide a result' do
+    it 'raises if every endpoint in the list also raises' do
       lambda do
         RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
-          nil
+          raise StandardError, "Fall down go boom!"
         end
       end.should raise_exception(RightSupport::Net::NoResponse)
     end
@@ -112,10 +96,12 @@ describe RightSupport::Net::RequestBalancer do
     it 'raises rescued exception if all endpoints fail to provide a result but some raise an exception' do
       lambda do
         RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
-          raise TestException, "Fall down go boom!" if l == 2
-          nil
+          case l
+            when 1,2 then raise TestException
+            when 3 then raise OtherTestException
+          end
         end
-      end.should raise_exception(TestException)
+      end.should raise_exception(RightSupport::Net::NoResponse, /TestException/)
     end
   end
 end

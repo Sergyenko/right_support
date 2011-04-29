@@ -32,7 +32,7 @@ module RightSupport::Net
       @options = options.dup
     end
 
-    # Perform a request
+    # Perform a request.
     #
     # === Block
     # This method requires a block, to which it yields in order to perform the actual network
@@ -48,24 +48,27 @@ module RightSupport::Net
     def request
       raise ArgumentError, "Must call this method with a block" unless block_given?
 
-      exception = nil
-      result    = nil
+      exceptions = []
+      result     = nil
+      success    = false
 
-      @endpoints.each do |host|
+      @endpoints.each do |endpoint|
         begin
-          result = yield(host)
-          break unless result.nil?
+          result  = yield(endpoint)
+          success = true
+          break
         rescue Exception => e
           fatal = @options[:fatal]
           safe  = @options[:safe]
           raise e if (fatal && e.kind_of?(fatal)) && !(safe && e.kind_of?(safe))
-          exception = e
+          exceptions << e
         end
       end
 
-      return result if result
-      raise exception if exception
-      raise NoResponse, "Tried all URLs with neither result nor exception!"
+      return result if success
+
+      exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
+      raise NoResponse, "All URLs in the rotation failed! Exceptions: #{exceptions}"
     end
   end # RequestBalancer
 
