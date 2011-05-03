@@ -3,9 +3,34 @@ require 'spec_helper'
 class TestException < Exception; end
 class OtherTestException < Exception; end
 class BigDeal < TestException; end
-class NoBigDeal < BigDeal; end
+class NoBigDeal < TestException; end
+
+class MockResourceNotFound < Exception
+  def http_code
+    404
+  end
+end
 
 describe RightSupport::Net::RequestBalancer do
+  def test_raise(fatal, do_raise, expect)
+    rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>fatal)
+    tries = 0
+    l = lambda do
+      rb.request do |_|
+        tries += 1
+        raise do_raise if do_raise
+      end
+    end
+
+    if expect.first
+      l.should raise_error(expect.first)
+    else
+      l.should_not raise_error
+    end
+
+    tries.should == expect.last
+  end
+
   context :initialize do
     it 'requires a list of endpoint URLs' do
       lambda do
@@ -13,33 +38,27 @@ describe RightSupport::Net::RequestBalancer do
       end.should raise_exception(ArgumentError)
     end
 
-    context 'with :fatal option' do
-      it 're-raises exceptions of the fatal class' do
-        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>BigDeal)
-        tries = 0
-        lambda do
-          rb.request do |l|
-            tries += 1
-            raise BigDeal
-          end
-        end.should raise_error(BigDeal)
-
-        tries.should == 1
+    context 'without :fatal option' do
+      it 're-raises reasonable default fatal errors' do
+        test_raise(nil, StandardError, [StandardError, 1])
+        test_raise(nil, MockResourceNotFound, [MockResourceNotFound, 1])
       end
     end
 
-    context 'with :fatal and :safe options' do
-      it 'does not re-raise exceptions of the safe class' do
-        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>BigDeal, :safe=>NoBigDeal)
-        tries = 0
-        lambda do
-          rb.request do |l|
-            tries += 1
-            raise NoBigDeal
-          end
-        end.should raise_error(RightSupport::Net::NoResponse, /NoBigDeal/)
+    context 'with :fatal option' do
+      it 're-raises fatal errors' do
+        test_raise(BigDeal, BigDeal, [BigDeal, 1])
+        test_raise([BigDeal, NoBigDeal], NoBigDeal, [NoBigDeal, 1])
+        test_raise(true, NoBigDeal, [NoBigDeal, 1])
+        test_raise(lambda {|e| e.is_a? BigDeal }, BigDeal, [BigDeal, 1])
+      end
 
-        tries.should == 3
+      it 'swallows nonfatal errors' do
+        test_raise(nil, BigDeal, [RightSupport::Net::NoResponse, 3])
+        test_raise(BigDeal, NoBigDeal, [RightSupport::Net::NoResponse, 3])
+        test_raise([BigDeal], NoBigDeal, [RightSupport::Net::NoResponse, 3])
+        test_raise(false, NoBigDeal, [RightSupport::Net::NoResponse, 3])
+        test_raise(lambda {|e| e.is_a? BigDeal }, NoBigDeal, [RightSupport::Net::NoResponse, 3])
       end
     end
   end
@@ -62,7 +81,7 @@ describe RightSupport::Net::RequestBalancer do
         RightSupport::Net::RequestBalancer.new(list).request do |l|
           random << l
           x += 1
-          raise StandardError, "Fall down go boom!" unless x >= 9
+          raise NoBigDeal, "Fall down go boom!" unless x >= 9
           l
         end
 
@@ -77,7 +96,7 @@ describe RightSupport::Net::RequestBalancer do
 
       10.times do
         x = RightSupport::Net::RequestBalancer.new(list).request do |l|
-          raise StandardError, "Fall down go boom!" unless l == 5
+          raise NoBigDeal, "Fall down go boom!" unless l == 5
           l
         end
 
@@ -88,7 +107,7 @@ describe RightSupport::Net::RequestBalancer do
     it 'raises if every endpoint in the list also raises' do
       lambda do
         RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
-          raise StandardError, "Fall down go boom!"
+          raise NoBigDeal, "Fall down go boom!"
         end
       end.should raise_exception(RightSupport::Net::NoResponse)
     end

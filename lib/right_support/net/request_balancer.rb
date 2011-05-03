@@ -11,7 +11,32 @@ module RightSupport::Net
   # class usable for various network protocols, and potentially even for non-
   # networking purposes. The block does all the work; the balancer merely selects
   # a random request endpoint to pass to the block.
+  #
+  # PLEASE NOTE that the request balancer has a rather dumb notion of what is considered
+  # a "fatal" error for purposes of being able to retry; by default, it will consider
+  # any StandardError or any RestClient::Exception whose code is between 400-499. This
+  # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
+  # option if you need different behavior.
   class RequestBalancer
+    DEFAULT_FATAL_PROC = lambda do |e|
+      if defined?(RestClient::RequestTimeout) && e.is_a?(RestClient::RequestTimeout)
+        #Sometimes, RestClient returns a RequestTimeout WITHOUT an HTTP code
+        false
+      elsif e.respond_to?(:http_code) && (e.http_code != nil)
+        #RestClient's exceptions all respond to http_code, allowing us
+        #to decide based on the HTTP response code.
+        #Any HTTP 4xx code EXCEPT 408 (Request Timeout) counts as fatal.
+        (e.http_code >= 400 && e.http_code < 500) && (e.http_code != 408)
+      elsif e.is_a?(StandardError)
+        #StandardErrors (other than RestClient) generally count as failures
+        #since they're indicative of problems with the code
+        true
+      else
+        #Anything else counts as non-fatal
+        false
+      end
+    end
+
     def self.request(endpoints, options={}, &block)
       new(endpoints, options).request(&block)
     end
@@ -24,8 +49,7 @@ module RightSupport::Net
     # endpoints(Array):: a set of network endpoints (e.g. HTTP URLs) to be load-balanced
     #
     # === Options
-    # fatal(Class):: a subclass of Exception that is considered fatal and causes #request to re-raise immediately
-    # safe(Class):: a subclass of :fatal that is considered "safe" even though its parent class is fatal
+    # fatal(Class):: a class, list of classes or decision Proc to determine whether an exception is fatal and should not be retried
     def initialize(endpoints, options={})
       raise ArgumentError, "Must specify at least one endpoint" unless endpoints && !endpoints.empty?
       @endpoints = endpoints.shuffle
@@ -58,10 +82,11 @@ module RightSupport::Net
           success = true
           break
         rescue Exception => e
-          fatal = @options[:fatal]
-          safe  = @options[:safe]
-          raise e if (fatal && e.kind_of?(fatal)) && !(safe && e.kind_of?(safe))
-          exceptions << e
+          if to_raise = handle_exception(e)
+            raise(to_raise)
+          else
+            exceptions << e
+          end
         end
       end
 
@@ -69,6 +94,33 @@ module RightSupport::Net
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
       raise NoResponse, "All URLs in the rotation failed! Exceptions: #{exceptions}"
+    end
+
+    protected
+
+    # Decide what to do with an exception. The decision is influenced by the :fatal
+    # option passed to the constructor.
+    def handle_exception(e)
+      fatal = @options[:fatal] || DEFAULT_FATAL_PROC
+
+      #The option may be a proc or lambda; call it to get input
+      fatal = fatal.call(e) if fatal.respond_to?(:call)
+
+      #The options may be single exception classes, in which case we want to expand
+      #it out into a list
+      fatal = [fatal] if fatal.is_a?(Class)
+
+      #The option may be a list of exception classes, in which case we want to evaluate
+      #whether the exception we're handling is an instance of any mentioned exception
+      #class
+      fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
+
+      if fatal
+        #Final decision: did we identify it as fatal?
+        return e
+      else
+        return nil
+      end
     end
   end # RequestBalancer
 

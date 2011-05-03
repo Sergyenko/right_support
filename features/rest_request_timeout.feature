@@ -1,4 +1,4 @@
-Feature: REST requests
+Feature: REST request timeout
   In order to enhance system availability for customers
   RightSupport should provide robust REST query interfaces 
   So apps do not become hung during network failures

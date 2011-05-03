@@ -83,33 +83,24 @@ Given /^(an?|\d+)? ([\w-]+) servers?$/ do |number, behavior|
   end
 end
 
-When /a client makes a load-balanced request to '(.*)' with timeout (\d+)/ do |path, timeout|
-  timeout = timeout.to_i
-  urls = @mock_servers.map { |s| s.url }
-  @request_balancer = RightSupport::Net::RequestBalancer.new(urls, :fatal=>Exception, :safe=>RestClient::RequestTimeout)
-  @request_t0 = Time.now
-  begin
-    @request_balancer.request do |url|
-      RightSupport::Net::REST.get("#{url}#{path}", {}, timeout)
+Given /^(an?|\d+)? servers? that always responds? with ([0-9]+)$/ do |number, status_code|
+  number = 0 if number =~ /no/
+  number = 1 if number =~ /an?/
+  number = number.to_i
+
+  status_code = status_code.to_i
+
+  proc = Proc.new do
+    klass = WEBrick::HTTPStatus::CodeToError[status_code]
+    klass.should_not be_nil
+    raise klass, "Simulated #{status_code} response"
+  end
+
+  number.times do
+    server = MockServer.new do |s|
+      s.mount('/', WEBrick::HTTPServlet::ProcHandler.new(proc))
     end
-  rescue Exception => e
-    @request_error = e
-  end
-  @request_t1 = Time.now
-end
 
-Then /the request should (\w+) in less than (\d+) seconds?/ do |behavior, time|
-  case behavior
-    when 'complete'
-      error_expected = false
-    when 'raise'
-      error_expected = true
-    else
-      raise ArgumentError, "Unknown request behavior #{behavior}"
+    @mock_servers << server
   end
-
-  #allow 5% margin of error due to Ruby/OS scheduler variance
-  (@request_t1.to_f - @request_t0.to_f).should <= (time.to_f * 1.05)
-  @request_error.should be_nil unless error_expected
-  @request_error.should_not be_nil if error_expected
 end
