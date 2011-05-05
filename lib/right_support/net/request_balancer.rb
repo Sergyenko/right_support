@@ -27,8 +27,11 @@ module RightSupport::Net
         #to decide based on the HTTP response code.
         #Any HTTP 4xx code EXCEPT 408 (Request Timeout) counts as fatal.
         (e.http_code >= 400 && e.http_code < 500) && (e.http_code != 408)
+      elsif e.is_a?(SystemCallError)
+        #Failed system calls can be retried
+        false
       elsif e.is_a?(StandardError)
-        #StandardErrors (other than RestClient) generally count as failures
+        #StandardErrors (other than RestClient & SystemCallError) generally count as failures
         #since they're indicative of problems with the code
         true
       else
