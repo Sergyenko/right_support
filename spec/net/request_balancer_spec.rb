@@ -91,6 +91,34 @@ describe RightSupport::Net::RequestBalancer do
       seen.size.should >= 50
     end
 
+    context 'with default :fatal option' do
+      it 'retries SystemCallError' do
+        list = [1,2,3,4,5,6,7,8,9,10]
+        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
+          raise SystemCallError, 'moo' unless l == 5
+          l
+        end
+
+        x.should == 5
+      end
+
+      it 'does not retry StandardError' do
+        list = [1,2,3,4,5,6,7,8,9,10]
+        rb = RightSupport::Net::RequestBalancer.new(list)
+
+        lambda do
+          rb.request do |l|
+            raise ArgumentError, 'bah'
+            l
+          end
+        end.should raise_error(ArgumentError)
+      end
+
+      it 'retries HTTP timeouts'
+
+      it 'does not retry HTTP 4xx other than timeout'
+    end
+
     it 'retries when an exception is raised' do
       list = [1,2,3,4,5,6,7,8,9,10]
 
