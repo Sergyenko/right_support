@@ -85,6 +85,7 @@ module RightSupport::Net
           success = true
           break
         rescue Exception => e
+          @options[:exceptions_callback].call(endpoint, e) if @options[:exceptions_callback]
           if to_raise = handle_exception(e)
             raise(to_raise)
           else
