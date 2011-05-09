@@ -38,29 +38,6 @@ describe RightSupport::Net::RequestBalancer do
       end.should raise_exception(ArgumentError)
     end
 
-    context 'without :fatal option' do
-      it 're-raises reasonable default fatal errors' do
-        test_raise(nil, StandardError, [StandardError, 1])
-        test_raise(nil, MockResourceNotFound, [MockResourceNotFound, 1])
-      end
-    end
-
-    context 'with :fatal option' do
-      it 're-raises fatal errors' do
-        test_raise(BigDeal, BigDeal, [BigDeal, 1])
-        test_raise([BigDeal, NoBigDeal], NoBigDeal, [NoBigDeal, 1])
-        test_raise(true, NoBigDeal, [NoBigDeal, 1])
-        test_raise(lambda {|e| e.is_a? BigDeal }, BigDeal, [BigDeal, 1])
-      end
-
-      it 'swallows nonfatal errors' do
-        test_raise(nil, BigDeal, [RightSupport::Net::NoResponse, 3])
-        test_raise(BigDeal, NoBigDeal, [RightSupport::Net::NoResponse, 3])
-        test_raise([BigDeal], NoBigDeal, [RightSupport::Net::NoResponse, 3])
-        test_raise(false, NoBigDeal, [RightSupport::Net::NoResponse, 3])
-        test_raise(lambda {|e| e.is_a? BigDeal }, NoBigDeal, [RightSupport::Net::NoResponse, 3])
-      end
-    end
   end
 
   context :request do
@@ -91,27 +68,48 @@ describe RightSupport::Net::RequestBalancer do
       seen.size.should >= 50
     end
 
-    context 'with default :fatal option' do
-      it 'retries SystemCallError' do
-        list = [1,2,3,4,5,6,7,8,9,10]
-        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
-          raise SystemCallError, 'moo' unless l == 5
-          l
-        end
-
-        x.should == 5
+    context 'without :fatal option' do
+      it 're-raises reasonable default fatal errors' do
+        test_raise(nil, MockResourceNotFound, [MockResourceNotFound, 1])
       end
 
-      it 'does not retry StandardError' do
+      it 'swallows StandardError and friends' do
+        [ArgumentError, SystemCallError, SocketError].each do |klass|
+          test_raise(nil, klass, [RightSupport::Net::NoResult, 3])
+        end
+      end
+    end
+
+    context 'with :fatal option' do
+      it 're-raises fatal errors' do
+        test_raise(BigDeal, BigDeal, [BigDeal, 1])
+        test_raise([BigDeal, NoBigDeal], NoBigDeal, [NoBigDeal, 1])
+        test_raise(true, NoBigDeal, [NoBigDeal, 1])
+        test_raise(lambda {|e| e.is_a? BigDeal }, BigDeal, [BigDeal, 1])
+      end
+
+      it 'swallows nonfatal errors' do
+        test_raise(nil, BigDeal, [RightSupport::Net::NoResult, 3])
+        test_raise(BigDeal, NoBigDeal, [RightSupport::Net::NoResult, 3])
+        test_raise([BigDeal], NoBigDeal, [RightSupport::Net::NoResult, 3])
+        test_raise(false, NoBigDeal, [RightSupport::Net::NoResult, 3])
+        test_raise(lambda {|e| e.is_a? BigDeal }, NoBigDeal, [RightSupport::Net::NoResult, 3])
+      end
+    end
+
+    context 'with default :fatal option' do
+      it 'retries StandardError and friends' do
         list = [1,2,3,4,5,6,7,8,9,10]
         rb = RightSupport::Net::RequestBalancer.new(list)
 
-        lambda do
-          rb.request do |l|
-            raise ArgumentError, 'bah'
-            l
-          end
-        end.should raise_error(ArgumentError)
+        [StandardError, ArgumentError, SystemCallError, SocketError].each do |klass|
+          lambda do
+            rb.request do |l|
+              raise klass, 'bah'
+              l
+            end
+          end.should raise_error(RightSupport::Net::NoResult)
+        end
       end
 
       it 'retries HTTP timeouts'
@@ -119,7 +117,30 @@ describe RightSupport::Net::RequestBalancer do
       it 'does not retry HTTP 4xx other than timeout'
     end
 
-    it 'retries when an exception is raised' do
+    context 'with :on_exception option' do
+      before(:each) do
+        @list = [1,2,3,4,5,6,7,8,9,10]
+        @callback = flexmock('Callback proc')
+        @rb = RightSupport::Net::RequestBalancer.new(@list, :fatal=>BigDeal, :on_exception=>@callback)
+      end
+
+      it 'calls me back with fatal exceptions' do
+        @callback.should_receive(:call).with(true, BigDeal, Integer)
+        lambda {
+          @rb.request { raise BigDeal }
+        }.should raise_error(BigDeal)
+      end
+
+      it 'calls me back with nonfatal exceptions' do
+        @callback.should_receive(:call).with(false, NoBigDeal, Integer)
+        lambda {
+          @rb.request { raise NoBigDeal }
+        }.should raise_error(RightSupport::Net::NoResult)
+
+      end
+    end
+
+    it 'retries until a request completes' do
       list = [1,2,3,4,5,6,7,8,9,10]
 
       10.times do
@@ -132,23 +153,12 @@ describe RightSupport::Net::RequestBalancer do
       end
     end
 
-    it 'raises if every endpoint in the list also raises' do
+    it 'raises if no request completes' do
       lambda do
         RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
           raise NoBigDeal, "Fall down go boom!"
         end
-      end.should raise_exception(RightSupport::Net::NoResponse)
-    end
-
-    it 'raises rescued exception if all endpoints fail to provide a result but some raise an exception' do
-      lambda do
-        RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
-          case l
-            when 1,2 then raise TestException
-            when 3 then raise OtherTestException
-          end
-        end
-      end.should raise_exception(RightSupport::Net::NoResponse, /TestException/)
+      end.should raise_exception(RightSupport::Net::NoResult, /NoBigDeal/)
     end
   end
 end

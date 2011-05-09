@@ -1,7 +1,7 @@
 module RightSupport::Net
   # Raised to indicate the (uncommon) error condition where a RequestBalancer rotated
   # through EVERY URL in a list without getting a non-nil, non-timeout response. 
-  class NoResponse < Exception; end
+  class NoResult < Exception; end
 
   # Utility class that allows network requests to be randomly distributed across
   # a set of network endpoints. Generally used for REST requests by passing an
@@ -27,13 +27,6 @@ module RightSupport::Net
         #to decide based on the HTTP response code.
         #Any HTTP 4xx code EXCEPT 408 (Request Timeout) counts as fatal.
         (e.http_code >= 400 && e.http_code < 500) && (e.http_code != 408)
-      elsif e.is_a?(SystemCallError)
-        #Failed system calls can be retried
-        false
-      elsif e.is_a?(StandardError)
-        #StandardErrors (other than RestClient & SystemCallError) generally count as failures
-        #since they're indicative of problems with the code
-        true
       else
         #Anything else counts as non-fatal
         false
@@ -53,6 +46,8 @@ module RightSupport::Net
     #
     # === Options
     # fatal(Class):: a class, list of classes or decision Proc to determine whether an exception is fatal and should not be retried
+    # on_exception(Proc|Lambda):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
+    #
     def initialize(endpoints, options={})
       raise ArgumentError, "Must specify at least one endpoint" unless endpoints && !endpoints.empty?
       @endpoints = endpoints.shuffle
@@ -68,7 +63,7 @@ module RightSupport::Net
     #
     # === Raise
     # ArgumentError:: if a block isn't supplied
-    # NoResponse:: if *every* URL in the list times out or returns nil
+    # NoResult:: if *every* URL in the list times out or returns nil
     #
     # === Return
     # Return the first non-nil value provided by the block.
@@ -85,8 +80,7 @@ module RightSupport::Net
           success = true
           break
         rescue Exception => e
-          @options[:exceptions_callback].call(endpoint, e) if @options[:exceptions_callback]
-          if to_raise = handle_exception(e)
+          if to_raise = handle_exception(endpoint, e)
             raise(to_raise)
           else
             exceptions << e
@@ -97,14 +91,14 @@ module RightSupport::Net
       return result if success
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
-      raise NoResponse, "All URLs in the rotation failed! Exceptions: #{exceptions}"
+      raise NoResult, "All URLs in the rotation failed! Exceptions: #{exceptions}"
     end
 
     protected
 
     # Decide what to do with an exception. The decision is influenced by the :fatal
     # option passed to the constructor.
-    def handle_exception(e)
+    def handle_exception(endpoint, e)
       fatal = @options[:fatal] || DEFAULT_FATAL_PROC
 
       #The option may be a proc or lambda; call it to get input
@@ -118,6 +112,8 @@ module RightSupport::Net
       #whether the exception we're handling is an instance of any mentioned exception
       #class
       fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
+
+      @options[:on_exception].call(fatal, e, endpoint) if @options[:on_exception]
 
       if fatal
         #Final decision: did we identify it as fatal?
