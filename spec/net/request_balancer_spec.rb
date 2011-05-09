@@ -38,6 +38,27 @@ describe RightSupport::Net::RequestBalancer do
       end.should raise_exception(ArgumentError)
     end
 
+    context 'with :fatal option' do
+      it 'validates the arity (if applicable)' do
+        bad_lambda = lambda { |too, many, arguments| }
+        lambda do
+          RightSupport::Net::RequestBalancer.new([1,2], :fatal=>bad_lambda)
+        end.should raise_error(ArgumentError)
+
+        lambda do
+          RightSupport::Net::RequestBalancer.new([1,2], :fatal=>BigDeal)
+        end.should_not raise_error
+      end
+    end
+
+    context 'with :on_exception option' do
+      it 'validates the arity' do
+        bad_lambda = lambda { |way, too, many, arguments| }
+        lambda do
+          RightSupport::Net::RequestBalancer.new([1,2], :on_exception=>bad_lambda)
+        end.should raise_error(ArgumentError)
+      end
+    end
   end
 
   context :request do
@@ -121,6 +142,9 @@ describe RightSupport::Net::RequestBalancer do
       before(:each) do
         @list = [1,2,3,4,5,6,7,8,9,10]
         @callback = flexmock('Callback proc')
+        @callback.should_receive(:respond_to?).with(:call).and_return(true)
+        @callback.should_receive(:respond_to?).with(:arity).and_return(true)
+        @callback.should_receive(:arity).and_return(3)
         @rb = RightSupport::Net::RequestBalancer.new(@list, :fatal=>BigDeal, :on_exception=>@callback)
       end
 

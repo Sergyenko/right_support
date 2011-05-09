@@ -49,7 +49,18 @@ module RightSupport::Net
     # on_exception(Proc|Lambda):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
     #
     def initialize(endpoints, options={})
-      raise ArgumentError, "Must specify at least one endpoint" unless endpoints && !endpoints.empty?
+      unless endpoints && !endpoints.empty?
+        raise ArgumentError, "Must specify at least one endpoint"
+      end
+
+      unless test_callable_arity(options[:fatal], 1, true)
+        raise ArgumentError, ":fatal callback must accept one parameter"
+      end
+
+      unless test_callable_arity(options[:on_exception], 3, false)
+        raise ArgumentError, ":on_exception callback must accept three parameters"
+      end
+
       @endpoints = endpoints.shuffle
       @options = options.dup
     end
@@ -121,6 +132,14 @@ module RightSupport::Net
       else
         return nil
       end
+    end
+
+    # Test that something is a callable (Proc, Lambda or similar) with the expected arity.
+    # Used mainly by the initializer to test for correct options.
+    def test_callable_arity(callable, arity, optional)
+      return true if callable.nil?
+      return true if optional && !callable.respond_to?(:call)
+      return callable.respond_to?(:arity) && (callable.arity == arity)
     end
   end # RequestBalancer
 
