@@ -110,7 +110,7 @@ describe RightSupport::Net::RequestBalancer do
           seen[permutation] += 1
         end
 
-        seen.each_pair do |permutation, count|
+        seen.each_pair do |_, count|
           (Float(count) / Float(trials)).should be_close(chance, 0.025) #allow 5% margin of error
         end
       end
