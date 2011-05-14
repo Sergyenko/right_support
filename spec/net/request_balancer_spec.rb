@@ -84,25 +84,57 @@ describe RightSupport::Net::RequestBalancer do
       end.should raise_exception(ArgumentError)
     end
 
-    it 'shuffles endpoints randomly' do
+    context 'with few endpoints' do
+      it 'shuffles randomly' do
+        list = [1,2,3]
+
+        seen = {}
+        # Counting permutations: nPr = n! (given n == r)
+        n = list.size
+        poss_permutations = (1..n).inject(:*)
+        chance = Float(1) / Float(poss_permutations)
+
+        trials = 10000
+
+        trials.times do
+          permutation = []
+          x = 0
+          RightSupport::Net::RequestBalancer.new(list).request do |l|
+            permutation << l
+            x += 1
+            raise NoBigDeal, "Fall down go boom!" unless x == 3
+            l
+          end
+
+          seen[permutation] ||= 0
+          seen[permutation] += 1
+        end
+
+        seen.each_pair do |permutation, count|
+          (Float(count) / Float(trials)).should be_close(chance, 0.025) #allow 5% margin of error
+        end
+      end
+    end
+
+    it 'retries until a request completes' do
       list = [1,2,3,4,5,6,7,8,9,10]
 
-      seen = Set.new
-      
-      100.times do
-        random = []
-        x = 0
-        RightSupport::Net::RequestBalancer.new(list).request do |l|
-          random << l
-          x += 1
-          raise NoBigDeal, "Fall down go boom!" unless x >= 9
+      10.times do
+        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
+          raise NoBigDeal, "Fall down go boom!" unless l == 5
           l
         end
 
-        seen << random
+        x.should == 5
       end
+    end
 
-      seen.size.should >= 50
+    it 'raises if no request completes' do
+      lambda do
+        RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
+          raise NoBigDeal, "Fall down go boom!"
+        end
+      end.should raise_exception(RightSupport::Net::NoResult, /NoBigDeal/)
     end
 
     context 'without :fatal option' do
@@ -190,27 +222,6 @@ describe RightSupport::Net::RequestBalancer do
         }.should raise_error(RightSupport::Net::NoResult)
 
       end
-    end
-
-    it 'retries until a request completes' do
-      list = [1,2,3,4,5,6,7,8,9,10]
-
-      10.times do
-        x = RightSupport::Net::RequestBalancer.new(list).request do |l|
-          raise NoBigDeal, "Fall down go boom!" unless l == 5
-          l
-        end
-
-        x.should == 5
-      end
-    end
-
-    it 'raises if no request completes' do
-      lambda do
-        RightSupport::Net::RequestBalancer.request([1,2,3]) do |l|
-          raise NoBigDeal, "Fall down go boom!"
-        end
-      end.should raise_exception(RightSupport::Net::NoResult, /NoBigDeal/)
     end
   end
 end
