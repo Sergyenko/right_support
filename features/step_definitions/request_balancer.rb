@@ -64,7 +64,7 @@ Then /^the request should (\w+ ?\w*) in less than (\d+) seconds?$/ do |behavior,
   end
   @request_error.should be_nil unless error_expected
   @request_error.should_not be_nil if error_expected
-  @request_error.class.name.include?(error_class_expected).should be_true unless error_class_expected.nil?
+  @request_error.class.name.should =~ Regexp.new(error_class_expected) if error_class_expected
   @request
 end
 

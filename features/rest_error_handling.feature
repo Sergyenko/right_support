@@ -18,5 +18,5 @@ Feature: REST error handling
   Scenario: client-side error
     Given a well-behaved server
     When a client makes a buggy load-balanced request to '/' with timeout 1000
-    Then the request should raise NoResult in less than 1 second
+    Then the request should raise ArgumentError in less than 1 second
     And the request should be attempted once

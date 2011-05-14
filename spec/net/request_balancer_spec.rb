@@ -5,20 +5,36 @@ class OtherTestException < Exception; end
 class BigDeal < TestException; end
 class NoBigDeal < TestException; end
 
-class MockResourceNotFound < Exception
-  def http_code
-    404
+class MockHttpError < Exception
+  attr_reader :http_code
+  def initialize(message=nil, code=400)
+    super(message)
+    @http_code = code
+  end
+end
+
+class MockResourceNotFound < MockHttpError
+  def initialize(message=nil)
+    super(message, 404)
+  end
+end
+
+class MockRequestTimeout < MockHttpError
+  def initialize(message=nil)
+    super(message, 408)
   end
 end
 
 describe RightSupport::Net::RequestBalancer do
   def test_raise(fatal, do_raise, expect)
+    expect = [expect] unless expect.respond_to?(:first)
+
     rb = RightSupport::Net::RequestBalancer.new([1,2,3], :fatal=>fatal)
     tries = 0
     l = lambda do
       rb.request do |_|
         tries += 1
-        raise do_raise if do_raise
+        raise do_raise, 'bah' if do_raise
       end
     end
 
@@ -91,11 +107,12 @@ describe RightSupport::Net::RequestBalancer do
 
     context 'without :fatal option' do
       it 're-raises reasonable default fatal errors' do
+        test_raise(nil, ArgumentError, [ArgumentError, 1])
         test_raise(nil, MockResourceNotFound, [MockResourceNotFound, 1])
       end
 
       it 'swallows StandardError and friends' do
-        [ArgumentError, SystemCallError, SocketError].each do |klass|
+        [SystemCallError, SocketError].each do |klass|
           test_raise(nil, klass, [RightSupport::Net::NoResult, 3])
         end
       end
@@ -119,23 +136,34 @@ describe RightSupport::Net::RequestBalancer do
     end
 
     context 'with default :fatal option' do
-      it 'retries StandardError and friends' do
+      it 'retries most Ruby builtin errors' do
         list = [1,2,3,4,5,6,7,8,9,10]
         rb = RightSupport::Net::RequestBalancer.new(list)
 
-        [StandardError, ArgumentError, SystemCallError, SocketError].each do |klass|
-          lambda do
-            rb.request do |l|
-              raise klass, 'bah'
-              l
-            end
-          end.should raise_error(RightSupport::Net::NoResult)
+        [IOError, SystemCallError, SocketError].each do |klass|
+          test_raise(nil, klass, [RightSupport::Net::NoResult, 3])
         end
       end
 
-      it 'retries HTTP timeouts'
+      it 'does not retry ArgumentError and other program errors' do
 
-      it 'does not retry HTTP 4xx other than timeout'
+      end
+
+      it 'retries HTTP timeouts' do
+        test_raise(nil, MockRequestTimeout, [RightSupport::Net::NoResult, 3])
+      end
+
+      it 'does not retry HTTP 4xx other than timeout' do
+        list = [1,2,3,4,5,6,7,8,9,10]
+        rb = RightSupport::Net::RequestBalancer.new(list)
+
+        codes = [401, 402, 403, 404, 405, 406, 407, 409]
+        codes.each do |code|
+          lambda do
+            rb.request { |l| raise MockHttpError.new(code) }
+          end.should raise_error(MockHttpError)
+        end
+      end
     end
 
     context 'with :on_exception option' do

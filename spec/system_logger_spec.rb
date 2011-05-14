@@ -5,6 +5,17 @@ describe 'RightSupport::SystemLogger' do
     pending('unsupported on this platform') unless defined?(RightSupport::SystemLogger)
   end
 
+  it 'faithfully translates log levels' do
+    levels = { :debug=>Logger::DEBUG,
+               :info=>Logger::INFO, :warn=>Logger::WARN,
+               :error=>Logger::ERROR, :fatal=>Logger::FATAL }
+    levels.each_pair do |level, syslog_level|
+      @logger = RightSupport::SystemLogger.new('spec')
+      flexmock(@logger).should_receive(:emit_syslog).with(syslog_level, 'moo bah oink')
+      @logger.send(level, 'moo bah oink')
+    end
+  end
+
   it 'escapes % characters to avoid confusing printf()' do
     @logger = RightSupport::SystemLogger.new('spec')
     flexmock(@logger).should_receive(:emit_syslog).with(Integer, 'All systems 100%% -- %%licious!')

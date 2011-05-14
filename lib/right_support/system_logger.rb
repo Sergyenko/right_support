@@ -65,6 +65,8 @@ module RightSupport
         facility = options[:facility] || 'local0'
         fac_map = {'user'=>8}
         (0..7).each { |i| fac_map['local'+i.to_s] = 128+8*i }
+
+        @@syslog.close if @@syslog && @@syslog.opened?
         @@syslog ||= Syslog.open(program_name, nil, fac_map[facility.to_s])
       end
 

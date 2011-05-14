@@ -18,10 +18,12 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
+    DEFAULT_FATAL_EXCEPTIONS = [ScriptError, ArgumentError, IndexError, LocalJumpError, NameError]
+
     DEFAULT_FATAL_PROC = lambda do |e|
-      if defined?(RestClient::RequestTimeout) && e.is_a?(RestClient::RequestTimeout)
-        #Sometimes, RestClient returns a RequestTimeout WITHOUT an HTTP code
-        false
+      if DEFAULT_FATAL_EXCEPTIONS.any? { |c| e.is_a?(c) }
+        #Some Ruby builtin exceptions indicate program errors
+        true
       elsif e.respond_to?(:http_code) && (e.http_code != nil)
         #RestClient's exceptions all respond to http_code, allowing us
         #to decide based on the HTTP response code.
@@ -32,6 +34,11 @@ module RightSupport::Net
         false
       end
     end
+
+    DEFAULT_OPTIONS = {
+        :fatal        => DEFAULT_FATAL_PROC,
+        :on_exception => nil
+    }
 
     def self.request(endpoints, options={}, &block)
       new(endpoints, options).request(&block)
@@ -49,6 +56,8 @@ module RightSupport::Net
     # on_exception(Proc|Lambda):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
     #
     def initialize(endpoints, options={})
+      @options = DEFAULT_OPTIONS.merge(options)
+
       unless endpoints && !endpoints.empty?
         raise ArgumentError, "Must specify at least one endpoint"
       end
@@ -62,7 +71,6 @@ module RightSupport::Net
       end
 
       @endpoints = endpoints.shuffle
-      @options = options.dup
     end
 
     # Perform a request.
