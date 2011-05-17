@@ -91,12 +91,16 @@ module RightSupport::Net
 
       exceptions = []
       result     = nil
-      success    = false
+      complete   = false
+      n          = 0
 
-      @endpoints.each do |endpoint|
+      while !complete && n < @endpoints.size
+        endpoint = next_endpoint
+        n += 1
+
         begin
-          result  = yield(endpoint)
-          success = true
+          result   = yield(endpoint)
+          complete = true
           break
         rescue Exception => e
           if to_raise = handle_exception(endpoint, e)
@@ -107,7 +111,7 @@ module RightSupport::Net
         end
       end
 
-      return result if success
+      return result if complete
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
       raise NoResult, "All URLs in the rotation failed! Exceptions: #{exceptions}"
@@ -140,6 +144,13 @@ module RightSupport::Net
       else
         return nil
       end
+    end
+
+    def next_endpoint
+      @round_robin ||= 0
+      result = @endpoints[ @round_robin % @endpoints.size ]
+      @round_robin += 1
+      return result
     end
 
     # Test that something is a callable (Proc, Lambda or similar) with the expected arity.
