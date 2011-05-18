@@ -3,7 +3,8 @@ module RightSupport
     class UnknownService < Exception; end
     class MissingConfiguration < Exception; end
 
-    CLASS_CONFIG_KEY = 'class'
+    CLASS_CONFIG_KEY    = 'class'
+    SETTINGS_CONFIG_KEY = 'settings'
 
     @services = []
     @registry = {}
@@ -15,11 +16,12 @@ module RightSupport
 
     #TODO docs
     def self.reset
-
+      @services = []
+      @registry = {}
     end
 
     #TODO docs
-    def self.[](name)
+    def self.method_missing(name)
       name = name.to_s
       info = @registry[name]
       raise UnknownService, "The #{name} service has not been registered" unless info
@@ -29,21 +31,17 @@ module RightSupport
 
       service = @services[name]
 
+      #Instantiate the service proxy object if needed
       unless service
-        settings = info[name]
+        service_stanza = info[name]
         #TODO account for modules (steal Rails constantize?)
-        klass = Object.const_get(settings[CLASS_CONFIG_KEY])
+        klass = Object.const_get(service_stanza[CLASS_CONFIG_KEY])
         raise MissingConfiguration, "Every service must have a 'class' setting" unless klass
-        service = klass.new(settings)
+        service = klass.new(service_stanza[SETTINGS_CONFIG_KEY])
         @services[name] = service
       end
 
       return service
-    end
-
-    #TODO docs
-    def self.method_missing(name)
-      self[name]
     end
   end
 end
