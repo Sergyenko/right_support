@@ -7,3 +7,5 @@ require 'right_support/rack/custom_logger'
 require 'right_support/validation'
 
 require 'right_support/net'
+
+require 'right_support/cassandra_model'
