@@ -11,5 +11,15 @@ describe RightSupport::Services::ServiceInfoFile do
     File.open(@filename, 'w') { |f| f.puts YAML.dump(@settings) }
   end
 
-  it 'freshens when the file is modified on disk'
+  it 'freshens when the file is modified on disk' do
+    si = RightSupport::Services::ServiceInfoFile.new(@filename)
+    sleep(1) #kind of cheesy, but guaranteed to work, and without mocking...
+    FileUtils.touch(@filename)
+    si.freshen.should be_true
+  end
+
+  it 'does not freshen unless the file is modified' do
+    si = RightSupport::Services::ServiceInfoFile.new(@filename)
+    si.freshen.should be_false
+  end
 end

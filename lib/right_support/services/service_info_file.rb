@@ -10,7 +10,9 @@ module RightSupport::Services
     #TODO docs
     def freshen
       mtime = File.stat(@filename).mtime
-      return false if @last_mtime && mtime <= @last_mtime
+      last_mtime = @last_mtime
+      @last_mtime = mtime
+      return false if last_mtime && mtime <= last_mtime
       content = File.read(@filename)
       #TODO JSON support
       @services = YAML.load(content)
