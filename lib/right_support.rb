@@ -10,3 +10,4 @@ require 'right_support/validation'
 require 'right_support/net'
 
 require 'right_support/services'
+require 'right_support/configuration/configuration_info_file'
