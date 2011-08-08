@@ -32,3 +32,5 @@ end
 Dir[File.expand_path('../net/*.rb', __FILE__)].each do |filename|
   require filename
 end
+
+RightSupport::Net.extend(RightSupport::Net::AddressHelper)
