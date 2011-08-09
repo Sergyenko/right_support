@@ -1,5 +1,5 @@
 require 'spec_helper'
 
-describe RightSupport::FilterLogger do
+describe RightSupport::Log::FilterLogger do
   it 'has test coverage'
 end

@@ -22,41 +22,39 @@
 
 require 'logger'
 
-module RightSupport
-  module Rack
-    # A Rack middleware that allows an arbitrary object to be used as the Rack logger.
-    # This is more flexible than Rack's built-in Logger middleware, which always logs
-    # to a file-based Logger and doesn't allow you to control anything other than the
-    # filename.
-    class CustomLogger
-      # Initialize an instance of the middleware.
-      #
-      # === Parameters
-      # app(Object):: the inner application or middleware layer; must respond to #call
-      # level(Integer):: one of the Logger constants: DEBUG, INFO, WARN, ERROR, FATAL
-      # logger(Logger):: (optional) the Logger object to use, if other than default
-      #
-      def initialize(app, level = ::Logger::INFO, logger = nil)
-        @app, @level = app, level
+module RightSupport::Rack
+  # A Rack middleware that allows an arbitrary object to be used as the Rack logger.
+  # This is more flexible than Rack's built-in Logger middleware, which always logs
+  # to a file-based Logger and doesn't allow you to control anything other than the
+  # filename.
+  class CustomLogger
+    # Initialize an instance of the middleware.
+    #
+    # === Parameters
+    # app(Object):: the inner application or middleware layer; must respond to #call
+    # level(Integer):: one of the Logger constants: DEBUG, INFO, WARN, ERROR, FATAL
+    # logger(Logger):: (optional) the Logger object to use, if other than default
+    #
+    def initialize(app, level = ::Logger::INFO, logger = nil)
+      @app, @level = app, level
 
-        logger ||= ::Logger.new(env['rack.errors'])
-        logger.level = @level
-        @logger = logger
-      end
+      logger ||= ::Logger.new(env['rack.errors'])
+      logger.level = @level
+      @logger = logger
+    end
 
-      # Add a logger to the Rack environment and call the next middleware.
-      #
-      # === Parameters
-      # env(Hash):: the Rack environment
-      #
-      # === Return
-      # always returns whatever value is returned by the next layer of middleware
-      def call(env)
-        env['rack.logger'] = @logger
-        return @app.call(env)
-      ensure
-        @logger.close
-      end
+    # Add a logger to the Rack environment and call the next middleware.
+    #
+    # === Parameters
+    # env(Hash):: the Rack environment
+    #
+    # === Return
+    # always returns whatever value is returned by the next layer of middleware
+    def call(env)
+      env['rack.logger'] = @logger
+      return @app.call(env)
+    ensure
+      @logger.close
     end
   end
 end

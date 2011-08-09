@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'RightSupport::SystemLogger' do
+describe 'RightSupport::Log::SystemLogger' do
   before(:each) do
     pending('unsupported on this platform') unless defined?(RightSupport::SystemLogger)
   end
