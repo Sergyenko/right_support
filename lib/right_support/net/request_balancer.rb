@@ -2,7 +2,22 @@ module RightSupport::Net
   # Raised to indicate the (uncommon) error condition where a RequestBalancer rotated
   # through EVERY URL in a list without getting a non-nil, non-timeout response. 
   class NoResult < Exception; end
-
+  
+  #This module includes Load Balancing algorithms, which provides default set of functions
+  #like a "next endpoint," "report good endpoint", "report bad endpoint" and etc
+  module Policy
+    #Every balancing algorithm should be wrapped by module with the same name
+    module RoundRobin
+      def next_endpoint
+        @round_robin ||= 0
+        result = @endpoints[ @round_robin % @endpoints.size ]
+        @round_robin += 1
+        return result
+      end
+    end
+  end
+  
+  
   # Utility class that allows network requests to be randomly distributed across
   # a set of network endpoints. Generally used for REST requests by passing an
   # Array of HTTP service endpoint URLs.
@@ -18,6 +33,10 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
+    
+    #You should include balancing algorithm
+    include Policy::RoundRobin
+    
     DEFAULT_FATAL_EXCEPTIONS = [ScriptError, ArgumentError, IndexError, LocalJumpError, NameError]
 
     DEFAULT_FATAL_PROC = lambda do |e|
@@ -144,13 +163,6 @@ module RightSupport::Net
       else
         return nil
       end
-    end
-
-    def next_endpoint
-      @round_robin ||= 0
-      result = @endpoints[ @round_robin % @endpoints.size ]
-      @round_robin += 1
-      return result
     end
 
     # Test that something is a callable (Proc, Lambda or similar) with the expected arity.
