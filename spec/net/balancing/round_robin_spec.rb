@@ -5,7 +5,7 @@ describe RightSupport::Net::Balancing::RoundRobin do
     @policy = RightSupport::Net::Balancing::RoundRobin.new
   end
 
-  it 'chooses all endpoints with equal probability' do
+  it 'chooses fairly' do
     test_random_distribution do |list|
       @policy.next(list)
     end

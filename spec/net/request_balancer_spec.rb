@@ -54,6 +54,15 @@ describe RightSupport::Net::RequestBalancer do
       end.should raise_exception(ArgumentError)
     end
 
+    context 'with :retry option' do
+      it 'when :retry is Integer, stops after N total tries' do
+        pending
+      end
+      it 'when :retry is Proc, stops when call evaluates to true' do
+        pending
+      end
+    end
+
     context 'with :fatal option' do
       it 'validates the arity (if applicable)' do
         bad_lambda = lambda { |too, many, arguments| }

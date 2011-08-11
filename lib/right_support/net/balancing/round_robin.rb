@@ -31,11 +31,11 @@ module RightSupport::Net::Balancing
       endpoints[@counter % endpoints.size]
     end
 
-    def good(endpoint, latency)
+    def good(endpoint, t0, t1)
       #no-op; round robin does not care about failures
     end
 
-    def bad(endpoint)
+    def bad(endpoint, t0, t1)
       #no-op; round robin does not care about failures
     end
   end

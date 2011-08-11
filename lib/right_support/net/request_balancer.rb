@@ -27,6 +27,10 @@ module RightSupport::Net
       require file
     end
 
+    DEFAULT_RETRY_PROC = lambda do |ep, n|
+      n < ep.size
+    end
+
     DEFAULT_FATAL_EXCEPTIONS = [ScriptError, ArgumentError, IndexError, LocalJumpError, NameError]
 
     DEFAULT_FATAL_PROC = lambda do |e|
@@ -46,6 +50,7 @@ module RightSupport::Net
 
     DEFAULT_OPTIONS = {
         :policy       => nil,
+        :retry        => DEFAULT_RETRY_PROC,
         :fatal        => DEFAULT_FATAL_PROC,
         :on_exception => nil
     }
@@ -62,8 +67,9 @@ module RightSupport::Net
     # endpoints(Array):: a set of network endpoints (e.g. HTTP URLs) to be load-balanced
     #
     # === Options
-    # fatal(Class):: a class, list of classes or decision Proc to determine whether an exception is fatal and should not be retried
-    # on_exception(Proc|Lambda):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
+    # retry:: a Class, array of Class or decision Proc to determine whether to keep retrying; default is to try all endpoints
+    # fatal:: a Class, array of Class, or decision Proc to determine whether an exception is fatal and should not be retried
+    # on_exception(Proc):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
     #
     def initialize(endpoints, options={})
       @options = DEFAULT_OPTIONS.merge(options)
@@ -79,7 +85,11 @@ module RightSupport::Net
         raise ArgumentError, ":policy must be a class/object that responds to :next, :good and :bad"
       end
 
-      unless test_callable_arity(options[:fatal], 1, true)
+      unless test_callable_arity(options[:retry], 2)
+        raise ArgumentError, ":retry callback must accept two parameters"
+      end
+
+      unless test_callable_arity(options[:fatal], 1)
         raise ArgumentError, ":fatal callback must accept one parameter"
       end
 
@@ -111,31 +121,38 @@ module RightSupport::Net
       complete   = false
       n          = 0
 
-      while !complete && n < @endpoints.size
+      retry_opt = @options[:retry] || DEFAULT_RETRY_PROC
+
+      while !complete
         endpoint = @policy.next(@endpoints)
         n += 1
+        t0 = Time.now
 
         begin
-          t0 = Time.now.to_f
           result   = yield(endpoint)
-          t1 = Time.now.to_f
-          @policy.good(endpoint, t1-t0)
+          @policy.good(endpoint, t0, Time.now)
           complete = true
           break
         rescue Exception => e
-          @policy.bad(endpoint)
+          @policy.bad(endpoint, t0, Time.now)
           if to_raise = handle_exception(endpoint, e)
             raise(to_raise)
           else
             exceptions << e
           end
         end
+
+        unless complete
+          max_n = retry_opt
+          max_n = max_n.call(@endpoints, n) if max_n.respond_to?(:call)
+          break if (max_n.is_a?(Integer) && n >= max_n) || !(max_n)
+        end
       end
 
       return result if complete
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
-      raise NoResult, "All URLs in the rotation failed! Exceptions: #{exceptions}"
+      raise NoResult, "No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
     end
 
     protected
@@ -173,7 +190,7 @@ module RightSupport::Net
 
     # Test that something is a callable (Proc, Lambda or similar) with the expected arity.
     # Used mainly by the initializer to test for correct options.
-    def test_callable_arity(callable, arity, optional)
+    def test_callable_arity(callable, arity, optional=true)
       return true if callable.nil?
       return true if optional && !callable.respond_to?(:call)
       return callable.respond_to?(:arity) && (callable.arity == arity)
