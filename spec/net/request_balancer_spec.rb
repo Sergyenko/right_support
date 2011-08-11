@@ -47,22 +47,6 @@ describe RightSupport::Net::RequestBalancer do
     tries.should == expect.last
   end
 
-  def test_randomness(trials=25000, list=[1,2,3])
-    seen = {}
-
-    trials.times do
-      value = yield(list)
-      seen[value] ||= 0
-      seen[value] += 1
-    end
-
-    #Load should be evenly distributed
-    chance = 1.0 / list.size
-    seen.each_pair do |_, count|
-      (Float(count) / Float(trials)).should be_close(chance, 0.025) #allow 5% margin of error
-    end
-  end
-
   context :initialize do
     it 'requires a list of endpoint URLs' do
       lambda do
@@ -91,6 +75,30 @@ describe RightSupport::Net::RequestBalancer do
         end.should raise_error(ArgumentError)
       end
     end
+    context 'with :policy option' do
+      it 'accepts a Class' do
+        policy = RightSupport::Net::Balancing::RoundRobin.new
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
+        }.should_not raise_error
+      end
+
+      it 'accepts an object' do
+        policy = RightSupport::Net::Balancing::RoundRobin.new
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
+        }.should_not raise_error
+      end
+
+      it 'checks for duck-type compatibility' do
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>String)
+        }.should raise_error
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>'I like cheese')
+        }.should raise_error
+      end
+    end
   end
 
   context :request do
@@ -98,29 +106,6 @@ describe RightSupport::Net::RequestBalancer do
       lambda do
         RightSupport::Net::RequestBalancer.new([1]).request
       end.should raise_exception(ArgumentError)
-    end
-
-    context 'when called as a class method' do
-      it 'shuffles randomly' do
-
-        test_randomness do |list|
-          RightSupport::Net::RequestBalancer.request(list) do |endpoint|
-            endpoint
-          end
-        end
-      end
-    end
-
-    context 'when called as an instance method' do
-      it 'shuffles randomly' do
-
-        test_randomness do |list|
-          @balancer ||= RightSupport::Net::RequestBalancer.new(list)
-          @balancer.request do |endpoint|
-            endpoint
-          end
-        end
-      end
     end
 
     it 'retries until a request completes' do
