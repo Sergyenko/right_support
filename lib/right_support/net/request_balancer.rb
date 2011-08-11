@@ -3,24 +3,13 @@ module RightSupport::Net
   # through EVERY URL in a list without getting a non-nil, non-timeout response. 
   class NoResult < Exception; end
   
-  #This module includes Load Balancing algorithms, which provides default set of functions
-  #like a "next endpoint," "report good endpoint", "report bad endpoint" and etc
-  module Policy
-    #Every balancing algorithm should be wrapped by module with the same name
-    module RoundRobin
-      def next_endpoint
-        @round_robin ||= 0
-        result = @endpoints[ @round_robin % @endpoints.size ]
-        @round_robin += 1
-        return result
-      end
-    end
-  end
-  
-  
   # Utility class that allows network requests to be randomly distributed across
   # a set of network endpoints. Generally used for REST requests by passing an
   # Array of HTTP service endpoint URLs.
+  #
+  # Note that this class also serves as a namespace for endpoint selection policies,
+  # which are classes that actually choose the next endpoint based on some criterion
+  # (round-robin, health of endpoint, response time, etc).
   #
   # The balancer does not actually perform requests by itself, which makes this
   # class usable for various network protocols, and potentially even for non-
@@ -33,10 +22,11 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
-    
-    #You should include balancing algorithm
-    include Policy::RoundRobin
-    
+    # Require all of the built-in balancer policies that live in our namespace.
+    Dir[File.expand_path('../request_balancer/*.rb', __FILE__)].each do |file|
+      require file
+    end
+
     DEFAULT_FATAL_EXCEPTIONS = [ScriptError, ArgumentError, IndexError, LocalJumpError, NameError]
 
     DEFAULT_FATAL_PROC = lambda do |e|
@@ -55,6 +45,7 @@ module RightSupport::Net
     end
 
     DEFAULT_OPTIONS = {
+        :policy       => nil,
         :fatal        => DEFAULT_FATAL_PROC,
         :on_exception => nil
     }
@@ -79,6 +70,13 @@ module RightSupport::Net
 
       unless endpoints && !endpoints.empty?
         raise ArgumentError, "Must specify at least one endpoint"
+      end
+
+      @options[:policy] ||= RightSupport::Net::Balancing::RoundRobin
+      @policy = @options[:policy]
+      @policy = @policy.new if @policy.is_a?(Class)
+      unless test_policy_duck_type(@policy)
+        raise ArgumentError, ":policy must be a class/object that responds to :next, :good and :bad"
       end
 
       unless test_callable_arity(options[:fatal], 1, true)
@@ -114,14 +112,18 @@ module RightSupport::Net
       n          = 0
 
       while !complete && n < @endpoints.size
-        endpoint = next_endpoint
+        endpoint = @policy.next(@endpoints)
         n += 1
 
         begin
+          t0 = Time.now.to_f
           result   = yield(endpoint)
+          t1 = Time.now.to_f
+          @policy.good(endpoint, t1-t0)
           complete = true
           break
         rescue Exception => e
+          @policy.bad(endpoint)
           if to_raise = handle_exception(endpoint, e)
             raise(to_raise)
           else
@@ -163,6 +165,10 @@ module RightSupport::Net
       else
         return nil
       end
+    end
+
+    def test_policy_duck_type(object)
+      [:next, :good, :bad].all? { |m| object.respond_to?(m) }
     end
 
     # Test that something is a callable (Proc, Lambda or similar) with the expected arity.

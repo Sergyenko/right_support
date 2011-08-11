@@ -1,8 +1,11 @@
 module RightSupport::Net
-  begin
-    require 'right_http_connection' 
-  rescue LoadError
+  if_require_succeeds('right_http_connection') do
+    #nothing, nothing at all! just need to make sure
+    #that RightHttpConnection gets loaded before
+    #rest-client, so the Net::HTTP monkey patches
+    #take effect.
   end
+
   if_require_succeeds('restclient') do
     HAS_REST_CLIENT = true
   end
