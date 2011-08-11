@@ -1,5 +1,5 @@
 # Namespaces for RightSupport
-require 'right_support/kernel_extensions'
+require 'right_support/ruby'
 require 'right_support/db'
 require 'right_support/log'
 require 'right_support/net'

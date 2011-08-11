@@ -1,5 +1,5 @@
-module RightSupport
-  module KernelExtensions
+module RightSupport::Ruby
+  module ObjectExtensions
     # Attempt to require one or more source files; if the require succeeds (or
     # if the files have already been successfully required), yield to the block.
     #
@@ -26,5 +26,5 @@ module RightSupport
 end
 
 class Object
-  include RightSupport::KernelExtensions
+  include RightSupport::Ruby::ObjectExtensions
 end

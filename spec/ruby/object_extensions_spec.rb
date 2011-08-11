@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe RightSupport::KernelExtensions do
+describe RightSupport::Ruby::ObjectExtensions do
   context :if_require_succeeds do
     it 'yields to its block when the require succeeds' do
       @canary = false
