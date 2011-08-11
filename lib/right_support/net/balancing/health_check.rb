@@ -29,10 +29,10 @@ module RightSupport::Net::Balancing
   # by avoiding "red" endpoints and retrying them after awhile. Here is a brief description
   # of the state transitions:
   # * green: last request was successful.
-  # *  * on success: remain green
+  #    * on success: remain green
   #    * on failure: change state to red
   # * red: skip this server
-  # *  * after @reset_time passes,
+  #    * after @reset_time passes,
   class HealthCheck
     def initialize(max_failures=0, reset_time=300)
       @max_failures = max_failures

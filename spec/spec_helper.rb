@@ -30,11 +30,7 @@ def find_empirical_distribution(trials, list=[1,2,3,4,5])
     seen[value] += 1
   end
 
-  #Load should be evenly distributed
-  chance = 1.0 / list.size
-  seen.each_pair do |_, count|
-    (Float(count) / Float(trials)).should be_close(chance, 0.025) #allow 5% margin of error
-  end
+  seen
 end
 
 def test_random_distribution(trials=25000, list=[1,2,3,4,5], &block)
