@@ -86,7 +86,7 @@ describe RightSupport::Net::RequestBalancer do
     end
     context 'with :policy option' do
       it 'accepts a Class' do
-        policy = RightSupport::Net::Balancing::RoundRobin.new
+        policy = RightSupport::Net::Balancing::RoundRobin
         lambda {
           RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
         }.should_not raise_error

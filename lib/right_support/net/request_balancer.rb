@@ -22,10 +22,13 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
+    
+    
+    ###!!! Remove it as unusable
     # Require all of the built-in balancer policies that live in our namespace.
-    Dir[File.expand_path('../request_balancer/*.rb', __FILE__)].each do |file|
-      require file
-    end
+    #Dir[File.expand_path('../request_balancer/*.rb', __FILE__)].each do |file|
+    #  require file
+    #end
 
     DEFAULT_RETRY_PROC = lambda do |ep, n|
       n < ep.size
