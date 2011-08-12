@@ -51,11 +51,16 @@ module RightSupport::Net
       end
     end
 
+    DEFAULT_HEALTH_CHECK_PROC = Proc.new do |ep|
+      true
+    end
+
     DEFAULT_OPTIONS = {
         :policy       => nil,
         :retry        => DEFAULT_RETRY_PROC,
         :fatal        => DEFAULT_FATAL_PROC,
-        :on_exception => nil
+        :on_exception => nil,
+        :health_check => DEFAULT_HEALTH_CHECK_PROC
     }
 
     def self.request(endpoints, options={}, &block)
@@ -73,6 +78,7 @@ module RightSupport::Net
     # retry:: a Class, array of Class or decision Proc to determine whether to keep retrying; default is to try all endpoints
     # fatal:: a Class, array of Class, or decision Proc to determine whether an exception is fatal and should not be retried
     # on_exception(Proc):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
+    # health_check(Proc):: callback that allows balancer to check an endpoint health; should raise an exception if the endpoint is not healthy
     #
     def initialize(endpoints, options={})
       @options = DEFAULT_OPTIONS.merge(options)
@@ -98,6 +104,10 @@ module RightSupport::Net
 
       unless test_callable_arity(options[:on_exception], 3, false)
         raise ArgumentError, ":on_exception callback must accept three parameters"
+      end
+
+      unless test_callable_arity(options[:health_check], 1, false)
+        raise ArgumentError, ":health_check callback must accept one parameters"
       end
 
       @endpoints = endpoints.shuffle
@@ -127,9 +137,19 @@ module RightSupport::Net
       retry_opt = @options[:retry] || DEFAULT_RETRY_PROC
 
       while !complete
-        endpoint = @policy.next(@endpoints)
+        endpoint, need_health_check  = @policy.next(@endpoints)
+
+        #TODO perform health check if necessary
+
+        raise NoResult, "No endpoints are available" unless endpoint
         n += 1
         t0 = Time.now
+
+        begin
+          #TODO: perform health check if needed.
+          #if exception, just call @policy.bad and continue to next endpoint
+        rescue Exception => e
+        end
 
         begin
           result   = yield(endpoint)

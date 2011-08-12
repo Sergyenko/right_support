@@ -46,55 +46,17 @@ describe RightSupport::Net::Balancing::HealthCheck do
     end
 
     context 'with some servers marked as red' do
-      context 'when @reset_time passes for one server' do
-        it 'turns that server green and chooses fairly' do
-          bad_endpoint = @endpoints.first 
-          @policy.bad(bad_endpoint,0,Time.now-300)
-          
-          sleep(1)
-          
-          seen = find_empirical_distribution(@trials,@endpoints) do |list|
-            @policy.next(list)
-          end
-          
-          seen.include?(bad_endpoint).should be_true
-          should_be_chosen_fairly(seen, @trials, @endpoints.size)
-        end
-      end
-      
-      context 'when @reset_time passes for all red servers' do
-        it 'resets all servers to green and chooses fairly' do
-          good_endpoint = @endpoints.last
-          
-          (@endpoints - [good_endpoint]).each {|e| @policy.bad(e,0,Time.now-299)}  
-          
-          seen = find_empirical_distribution(@trials,@endpoints) do |list|
-            @policy.next(list)
-          end
-          
-          seen.size.should == 1
-          seen[good_endpoint].should be_eql @trials
-          
-          @policy.bad(good_endpoint,0,Time.now-299)
-          
-          sleep(1)
-          
-          seen = find_empirical_distribution(@trials,@endpoints) do |list|
-            @policy.next(list)
-          end
-          should_be_chosen_fairly(seen, @trials, @endpoints.size)
+      context 'when @reset_time passes for one red server' do
+        it 'resets that server to yellow-N' do
+          pending
         end
       end
     end
 
     context 'with all servers down' do
-      it 'chooses fairly' do
+      it 'returns nil to indicate no servers are available' do
         @endpoints.each {|e| @policy.bad(e,0,Time.now + 1000)}
-        
-        seen = find_empirical_distribution(@trials,@endpoints) do |list|
-          @policy.next(list)
-        end
-        should_be_chosen_fairly(seen, @trials, @endpoints.size)
+        @policy.next(@endpoints).should be_nil
       end
     end
   end

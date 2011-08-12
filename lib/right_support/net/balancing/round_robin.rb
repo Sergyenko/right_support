@@ -28,7 +28,7 @@ module RightSupport::Net::Balancing
 
     def next(endpoints)
       @counter += 1
-      endpoints[@counter % endpoints.size]
+      [ endpoints[@counter % endpoints.size], false ]
     end
 
     def good(endpoint, t0, t1)
