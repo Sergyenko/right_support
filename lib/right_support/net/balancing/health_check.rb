@@ -38,16 +38,45 @@ module RightSupport::Net::Balancing
       @max_failures = max_failures
       @reset_time = reset_time
       @red = Hash.new # endpoint -> time it became red
+      @counter = rand(0xffff)
     end
 
     def next(endpoints)
-      endpoints.first #this is not very balanced!!
+      @counter += 1
+      green = endpoints - sweep_and_return_endpoints_from_hash(@red)
+      
+      #When all endpoints are red, the balancer should raise NoResult immediately, 
+      #before trying any endpoint
+      if green.size == 0
+        @red.clear
+        green = endpoints
+      end
+      
+      green[@counter % green.size]
     end
 
     def good(endpoint, t0, t1)
     end
 
     def bad(endpoint, t0, t1)
+      @red[endpoint] = {:t0 => t0, :t1 => t1}
+    end
+    
+    protected
+    
+    def sweep(endpoints_hash)
+      endpoints_hash.each do |endpoint,timestamps|
+        endpoints_hash.delete(endpoint) if Time.now - timestamps[:t1] > @reset_time
+      end
+      endpoints_hash
+    end
+    
+    def return_endpoints_from_hash(endpoints_hash)
+      endpoints_hash.keys
+    end
+    
+    def sweep_and_return_endpoints_from_hash(endpoints_hash)
+      return_endpoints_from_hash sweep(endpoints_hash)
     end
   end
 end
