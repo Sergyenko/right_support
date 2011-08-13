@@ -53,8 +53,6 @@ module RightSupport::Rack
     def call(env)
       env['rack.logger'] = @logger
       return @app.call(env)
-    ensure
-      @logger.close
     end
   end
 end
