@@ -34,8 +34,8 @@ module RightSupport::Net::Balancing
   # * red: skip this server
   #    * after @reset_time passes,
   class HealthCheck
-    def initialize(max_failures=0, reset_time=300)
-      @max_failures = max_failures
+    def initialize(yellow_states=4, reset_time=300)
+      @yellow_states = yellow_states
       @reset_time = reset_time
       @red = Hash.new # endpoint -> time it became red
       @counter = rand(0xffff)
@@ -44,29 +44,23 @@ module RightSupport::Net::Balancing
     def next(endpoints)
       @counter += 1
       green = endpoints - sweep_and_return_endpoints_from_hash(@red)
-      
-      #When all endpoints are red, the balancer should raise NoResult immediately, 
-      #before trying any endpoint
-      if green.size == 0
-        @red.clear
-        green = endpoints
-      end
-      
-      green[@counter % green.size]
+      return nil if green.empty?
+      #TODO false or true, depending on whether EP is yellow or not
+      [ green[@counter % green.size], false ]
     end
 
     def good(endpoint, t0, t1)
     end
 
     def bad(endpoint, t0, t1)
-      @red[endpoint] = {:t0 => t0, :t1 => t1}
+      @red[endpoint] = t1
     end
     
     protected
-    
+
     def sweep(endpoints_hash)
-      endpoints_hash.each do |endpoint,timestamps|
-        endpoints_hash.delete(endpoint) if Time.now - timestamps[:t1] > @reset_time
+      endpoints_hash.each do |endpoint,timestamp|
+        endpoints_hash.delete(endpoint) if Time.now - timestamp > @reset_time
       end
       endpoints_hash
     end
