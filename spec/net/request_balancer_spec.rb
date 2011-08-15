@@ -93,7 +93,7 @@ describe RightSupport::Net::RequestBalancer do
       end
 
       it 'accepts an object' do
-        policy = RightSupport::Net::Balancing::RoundRobin.new
+        policy = RightSupport::Net::Balancing::RoundRobin.new([1,2])
         lambda {
           RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
         }.should_not raise_error

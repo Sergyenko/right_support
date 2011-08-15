@@ -25,7 +25,7 @@ def find_empirical_distribution(trials=2500, list=[1,2,3,4,5])
   seen = {}
 
   trials.times do
-    value = yield(list)
+    value = yield
     seen[value] ||= 0
     seen[value] += 1
   end
@@ -34,7 +34,7 @@ def find_empirical_distribution(trials=2500, list=[1,2,3,4,5])
 end
 
 def test_random_distribution(trials=25000, list=[1,2,3,4,5], &block)
-  seen = find_empirical_distribution(trials, list, &block)
+  seen = find_empirical_distribution(trials, &block)
   should_be_chosen_fairly(seen,trials,list.size)
 end
 

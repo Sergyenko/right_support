@@ -23,6 +23,55 @@
 require 'set'
 
 module RightSupport::Net::Balancing
+  
+  class EndpointsStack
+    
+    def initialize(endpoints,yellow_states,reset_time)
+      @endpoints = Hash.new
+      @yellow_states = yellow_states
+      @reset_time = reset_time
+      endpoints.each {|ep| @endpoints[ep] = {:n_level => 0,:timestamp => 0 }}
+    end
+    
+    def green
+      green = []
+      @endpoints.each{|k,v| green << k if v[:n_level] == 0 }
+      green
+    end
+    
+    def yellow
+      yellow = []
+      @endpoints.each{|k,v| yellow << k  if v[:n_level] > 0 && v[:n_level] < @yellow_states }
+      yellow
+    end
+    
+    def red
+      red = []
+      @endpoints.each{|k,v| red << k if v[:n_level] >= @yellow_states }
+      red
+    end
+    
+    def sweep
+      @endpoints.each{|k,v| decrease_state(k,0,Time.now) if Float(Time.now - v[:timestamp]) > @reset_time }
+    end
+    
+    def sweep_and_return_yellow_and_green
+      sweep
+      green + yellow
+    end
+    
+    def decrease_state(endpoint,t0,t1)
+      @endpoints[endpoint][:n_level]    -= 1 unless @endpoints[endpoint][:n_level] == 0
+      @endpoints[endpoint][:timestamp]  = t1
+    end
+    
+    def increase_state(endpoint,t0,t1)
+      @endpoints[endpoint][:n_level]    += 1 unless @endpoints[endpoint][:n_level] == @yellow_states
+      @endpoints[endpoint][:timestamp]  = t1
+    end
+    
+  end
+  
   # TODO docs
   #
   # Implementation concepts: endpoints have two states, red and green. The balancer works
@@ -33,44 +82,28 @@ module RightSupport::Net::Balancing
   #    * on failure: change state to red
   # * red: skip this server
   #    * after @reset_time passes,
+
   class HealthCheck
-    def initialize(yellow_states=4, reset_time=300)
-      @yellow_states = yellow_states
-      @reset_time = reset_time
-      @red = Hash.new # endpoint -> time it became red
+    def initialize(endpoints,yellow_states=4, reset_time=300)
+      @stack = EndpointsStack.new(endpoints,yellow_states,reset_time)
       @counter = rand(0xffff)
     end
 
-    def next(endpoints)
+    def next
       @counter += 1
-      green = endpoints - sweep_and_return_endpoints_from_hash(@red)
-      return nil if green.empty?
+      endpoints = @stack.sweep_and_return_yellow_and_green
+      return nil if endpoints.empty?
       #TODO false or true, depending on whether EP is yellow or not
-      [ green[@counter % green.size], false ]
+      [ endpoints[@counter % endpoints.size], false ]
     end
 
     def good(endpoint, t0, t1)
+      @stack.decrease_state(endpoint,t0,t1)
     end
 
     def bad(endpoint, t0, t1)
-      @red[endpoint] = t1
+      @stack.increase_state(endpoint,t0,t1)
     end
     
-    protected
-
-    def sweep(endpoints_hash)
-      endpoints_hash.each do |endpoint,timestamp|
-        endpoints_hash.delete(endpoint) if Time.now - timestamp > @reset_time
-      end
-      endpoints_hash
-    end
-    
-    def return_endpoints_from_hash(endpoints_hash)
-      endpoints_hash.keys
-    end
-    
-    def sweep_and_return_endpoints_from_hash(endpoints_hash)
-      return_endpoints_from_hash sweep(endpoints_hash)
-    end
   end
 end

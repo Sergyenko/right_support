@@ -89,7 +89,7 @@ module RightSupport::Net
 
       @options[:policy] ||= RightSupport::Net::Balancing::RoundRobin
       @policy = @options[:policy]
-      @policy = @policy.new if @policy.is_a?(Class)
+      @policy = @policy.new(endpoints) if @policy.is_a?(Class)
       unless test_policy_duck_type(@policy)
         raise ArgumentError, ":policy must be a class/object that responds to :next, :good and :bad"
       end
@@ -137,7 +137,7 @@ module RightSupport::Net
       retry_opt = @options[:retry] || DEFAULT_RETRY_PROC
 
       while !complete
-        endpoint, need_health_check  = @policy.next(@endpoints)
+        endpoint, need_health_check  = @policy.next
 
         #TODO perform health check if necessary
 
