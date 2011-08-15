@@ -46,7 +46,7 @@ describe RightSupport::Net::Balancing::HealthCheck do
     end
 
     context 'with some servers marked as red' do
-      context 'when @reset_time passes for one server' do
+      context 'when @reset_time passes for one red server' do
         it 'turns that server green and chooses fairly' do
           bad_endpoint = @endpoints.first 
           @policy.bad(bad_endpoint,0,Time.now-300)
