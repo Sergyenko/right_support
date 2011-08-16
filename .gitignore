@@ -1,6 +1,7 @@
 .bundle
 .idea
 *.swp
+.rvmrc
 doc/*
 log/*
 tmp/*
