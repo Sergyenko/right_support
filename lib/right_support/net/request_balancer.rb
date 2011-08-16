@@ -51,7 +51,7 @@ module RightSupport::Net
       end
     end
 
-    DEFAULT_HEALTH_CHECK_PROC = Proc.new do |ep|
+    DEFAULT_HEALTH_CHECK_PROC = Proc.new do |endpoint|
       true
     end
 
@@ -81,6 +81,7 @@ module RightSupport::Net
     # health_check(Proc):: callback that allows balancer to check an endpoint health; should raise an exception if the endpoint is not healthy
     #
     def initialize(endpoints, options={})
+      
       @options = DEFAULT_OPTIONS.merge(options)
 
       unless endpoints && !endpoints.empty?
@@ -134,26 +135,38 @@ module RightSupport::Net
       complete   = false
       n          = 0
 
-      retry_opt = @options[:retry] || DEFAULT_RETRY_PROC
-
+      retry_opt     = @options[:retry] || DEFAULT_RETRY_PROC
+      health_check  = @options[:health_check]
+      
       while !complete
+        
         endpoint, need_health_check  = @policy.next
-
-        #TODO perform health check if necessary
 
         raise NoResult, "No endpoints are available" unless endpoint
         n += 1
         t0 = Time.now
-
-        begin
-          #TODO: perform health check if needed.
-          #if exception, just call @policy.bad and continue to next endpoint
-        rescue Exception => e
+        
+        
+        # TO DISCUSS:
+        # Maybe, it would be more useful to make the HealthCheck as a part of the balancing algorithm?
+        # HeathCheck goes here
+        if need_health_check
+          begin
+            health_check.call(endpoint) ? @policy.good(endpoint, t0, Time.now) : @policy.bad(endpoint, t0, Time.now)
+          rescue Exception => e
+            @policy.bad(endpoint, t0, Time.now)
+            next
+          end
         end
 
         begin
           result   = yield(endpoint)
-          @policy.good(endpoint, t0, Time.now)
+          # TO DISCUSS:
+          # Do we need to send "good" at this place? Because, if we're using "green" 
+          # we no need to make it more greener. As for "yellow" EP, we've already 
+          # sent "good" after the health_check.
+          #
+          #@policy.good(endpoint, t0, Time.now)
           complete = true
           break
         rescue Exception => e

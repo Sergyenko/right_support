@@ -26,48 +26,45 @@ module RightSupport::Net::Balancing
   
   class EndpointsStack
     
-    def initialize(endpoints,yellow_states,reset_time)
+    def initialize(endpoints, yellow_states, reset_time)
       @endpoints = Hash.new
       @yellow_states = yellow_states
       @reset_time = reset_time
-      endpoints.each {|ep| @endpoints[ep] = {:n_level => 0,:timestamp => 0 }}
-    end
-    
-    def green
-      green = []
-      @endpoints.each{|k,v| green << k if v[:n_level] == 0 }
-      green
-    end
-    
-    def yellow
-      yellow = []
-      @endpoints.each{|k,v| yellow << k  if v[:n_level] > 0 && v[:n_level] < @yellow_states }
-      yellow
-    end
-    
-    def red
-      red = []
-      @endpoints.each{|k,v| red << k if v[:n_level] >= @yellow_states }
-      red
+      endpoints.each { |ep| @endpoints[ep] = {:n_level => 0,:timestamp => 0 }}
     end
     
     def sweep
-      @endpoints.each{|k,v| decrease_state(k,0,Time.now) if Float(Time.now - v[:timestamp]) > @reset_time }
+      @endpoints.each { |k,v| decrease_state(k,0,Time.now) if Float(Time.now - v[:timestamp]) > @reset_time }
     end
     
     def sweep_and_return_yellow_and_green
       sweep
-      green + yellow
+      @endpoints.select { |k,v| v[:n_level] < @yellow_states }
     end
     
     def decrease_state(endpoint,t0,t1)
-      @endpoints[endpoint][:n_level]    -= 1 unless @endpoints[endpoint][:n_level] == 0
-      @endpoints[endpoint][:timestamp]  = t1
+      unless @endpoints[endpoint][:n_level] == 0
+        @endpoints[endpoint][:n_level]    -= 1
+        @endpoints[endpoint][:timestamp]  = t1
+      end
     end
     
     def increase_state(endpoint,t0,t1)
-      @endpoints[endpoint][:n_level]    += 1 unless @endpoints[endpoint][:n_level] == @yellow_states
-      @endpoints[endpoint][:timestamp]  = t1
+      unless @endpoints[endpoint][:n_level] == @yellow_states
+        @endpoints[endpoint][:n_level]    += 1
+        @endpoints[endpoint][:timestamp]  = t1
+      end
+    end
+    
+    def return_my_color(endpoint)
+      case n_level = @endpoints[endpoint][:n_level] 
+      when 0
+        "green"
+      when @yellow_states
+        "red"
+      else
+        "yellow-#{n_level}"
+      end
     end
     
   end
@@ -84,17 +81,24 @@ module RightSupport::Net::Balancing
   #    * after @reset_time passes,
 
   class HealthCheck
+    
     def initialize(endpoints,yellow_states=4, reset_time=300)
       @stack = EndpointsStack.new(endpoints,yellow_states,reset_time)
       @counter = rand(0xffff)
     end
 
     def next
-      @counter += 1
+      # Returns the array of hashes which consists of yellow and green endpoints with the 
+      # following structure: [ [EP1, {:n_level => ..., :timestamp => ... }], [EP2, ... ] ]
       endpoints = @stack.sweep_and_return_yellow_and_green
       return nil if endpoints.empty?
-      #TODO false or true, depending on whether EP is yellow or not
-      [ endpoints[@counter % endpoints.size], false ]
+      
+      # Selection of the next endpoint using RoundRobin
+      @counter += 1
+      i = @counter % endpoints.size      
+      
+      # Returns false or true, depending on whether EP is yellow or not
+      [ endpoints[i][0], endpoints[i][1][:n_level] != 0 ]
     end
 
     def good(endpoint, t0, t1)
@@ -103,6 +107,10 @@ module RightSupport::Net::Balancing
 
     def bad(endpoint, t0, t1)
       @stack.increase_state(endpoint,t0,t1)
+    end
+    
+    def test_who_am_i(endpoint)
+      @stack.return_my_color(endpoint)
     end
     
   end

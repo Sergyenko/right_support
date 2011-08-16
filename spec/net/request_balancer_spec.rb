@@ -84,6 +84,7 @@ describe RightSupport::Net::RequestBalancer do
         end.should raise_error(ArgumentError)
       end
     end
+    
     context 'with :policy option' do
       it 'accepts a Class' do
         policy = RightSupport::Net::Balancing::RoundRobin
@@ -106,6 +107,34 @@ describe RightSupport::Net::RequestBalancer do
         lambda {
           RightSupport::Net::RequestBalancer.new([1,2], :policy=>'I like cheese')
         }.should raise_error
+      end
+    end
+    
+    context 'with :health_check option' do
+      
+      before(:each) do
+        @health_check = Proc.new {|endpoint| "HealthCheck passed for #{endpoint}!" }
+      end
+      
+      it 'accepts a block' do
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :health_check => @health_check)
+        }.should_not raise_error
+      end
+      
+      it 'calls specified block' do 
+        @balancer = RightSupport::Net::RequestBalancer.new([1,2], :health_check => @health_check)
+        @options = @balancer.instance_variable_get("@options")
+        @options[:health_check].call(1).should be_eql("HealthCheck passed for 1!")
+      end
+      
+    end
+    
+    context 'with default :health_check option' do
+      it 'calls default block' do 
+        @balancer = RightSupport::Net::RequestBalancer.new([1,2])
+        @options = @balancer.instance_variable_get("@options")
+        @options[:health_check].call(1).should be_true
       end
     end
   end
