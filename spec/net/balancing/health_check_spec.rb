@@ -40,9 +40,9 @@ describe RightSupport::Net::Balancing::HealthCheck do
       end
 
       it 'changes to green if N == 0' do
-        @policy.bad(@yellow, 0, Time.now - 300)
+        @policy.bad(@yellow, 0, Time.now)
         @policy.should have_yellow_endpoint(@yellow, 1)
-        @policy.good(@yellow, 0, Time.now - 300)
+        @policy.good(@yellow, 0, Time.now)
         @policy.should have_green_endpoint(@yellow)
       end
       
