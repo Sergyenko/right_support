@@ -158,5 +158,25 @@ describe RightSupport::Net::Balancing::HealthCheck do
         @policy.should have_yellow_endpoint(@red, @yellow_states-1)
       end
     end
+    
+    context 'when @reset_time has passed since a server became yellow' do
+      it 'decreases the yellow level to N-1' do
+        @yellow = @endpoints.first
+        n = 2
+        n.times { @policy.bad(@yellow, 0, Time.now - 300) }
+        @policy.should have_yellow_endpoint(@yellow,n)
+        @policy.next
+        @policy.should have_yellow_endpoint(@yellow, n-1)
+      end
+      
+      it 'changes to green if N == 0' do
+        @yellow = @endpoints.first
+        @policy.bad(@yellow, 0, Time.now - 300)
+        @policy.should have_yellow_endpoint(@yellow, 1)
+        @policy.next
+        @policy.should have_green_endpoint(@yellow)
+      end
+      
+    end
   end
 end
