@@ -19,10 +19,10 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it "changes to yellow-N" do
         @red = @endpoints.first
         @yellow_states.times { @policy.bad(@red, 0, Time.now) }
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
         
         @policy.good(@red, 0, Time.now)
-        @policy.test_who_am_i(@red).should == "yellow-#{@yellow_states-1}"
+        @policy.should have_yellow_endpoint(@red, @yellow_states-1)
       end
     end
 
@@ -33,17 +33,17 @@ describe RightSupport::Net::Balancing::HealthCheck do
       
       it 'decreases the yellow level to N-1' do
         2.times { @policy.bad(@yellow, 0, Time.now) }
-        @policy.test_who_am_i(@yellow).should == 'yellow-2'
-        
+        @policy.should have_yellow_endpoint(@yellow, 2)
+
         @policy.good(@yellow, 0, Time.now)
-        @policy.test_who_am_i(@yellow).should == 'yellow-1'
+        @policy.should have_yellow_endpoint(@yellow, 1)
       end
 
       it 'changes to green if N == 0' do
         @policy.bad(@yellow, 0, Time.now - 300)
-        @policy.test_who_am_i(@yellow).should == 'yellow-1'
+        @policy.should have_yellow_endpoint(@yellow, 1)
         @policy.good(@yellow, 0, Time.now - 300)
-        @policy.test_who_am_i(@yellow).should == 'green'
+        @policy.should have_green_endpoint(@yellow)
       end
       
       it 'performs a health check' do
@@ -56,9 +56,9 @@ describe RightSupport::Net::Balancing::HealthCheck do
     context 'given a green server' do
       it 'changes to yellow-1' do
         @green = @endpoints.first
-        @policy.test_who_am_i(@green).should == 'green'
+        @policy.should have_green_endpoint(@green)
         @policy.bad(@green, 0, Time.now)
-        @policy.test_who_am_i(@green).should == 'yellow-1'
+        @policy.should have_yellow_endpoint(@green, 1)
       end
     end
 
@@ -70,19 +70,19 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'increases the yellow level to N+1' do
         n = 2
         n.times {@policy.bad(@yellow, 0, Time.now)}
-        @policy.test_who_am_i(@yellow).should == "yellow-#{n}"
-        
+        @policy.should have_yellow_endpoint(@yellow, n)
+
         @policy.bad(@yellow, 0, Time.now)
-        @policy.test_who_am_i(@yellow).should == "yellow-#{n+1}"
+        @policy.should have_yellow_endpoint(@yellow, n+1)
       end
 
       it 'changes to red if N >= @yellow_states' do
         n = @yellow_states - 1
         n.times { @policy.bad(@yellow, 0, Time.now) }
-        @policy.test_who_am_i(@yellow).should == "yellow-#{n}"
-        
+        @policy.should have_yellow_endpoint(@yellow, n)
+
         @policy.bad(@yellow, 0, Time.now)
-        @policy.test_who_am_i(@yellow).should == "red"
+        @policy.should have_red_endpoint(@yellow)
       end
     end
 
@@ -90,10 +90,10 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'does nothing' do
         @red = @endpoints.first
         @yellow_states.times { @policy.bad(@red, 0, Time.now) }
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
         
         @policy.bad(@red, 0, Time.now)
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
       end
     end
   end
@@ -112,7 +112,7 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'returns nil to indicate no servers are available' do
         @endpoints.each do |endpoint|
           @yellow_states.times { @policy.bad(endpoint, 0, Time.now) }
-          @policy.test_who_am_i(endpoint).should == "red"
+          @policy.should have_red_endpoint(endpoint)
         end
         @policy.next.should be_nil
       end
@@ -122,7 +122,7 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'never chooses red servers' do
         @red = @endpoints.first
         @yellow_states.times { @policy.bad(@red, 0, Time.now) }
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
         
         seen = find_empirical_distribution(@trials,@endpoints) do 
           @policy.next
@@ -134,7 +134,7 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'chooses fairly from the green and yellow servers' do
         @red = @endpoints.first
         @yellow_states.times { @policy.bad(@red, 0, Time.now) }
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
         
         seen = find_empirical_distribution(@trials,@endpoints) do
           @policy.next
@@ -153,9 +153,9 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'resets the server to yellow' do
         @red = @endpoints.first
         @yellow_states.times { @policy.bad(@red, 0, Time.now - 300) }
-        @policy.test_who_am_i(@red).should == "red"
+        @policy.should have_red_endpoint(@red)
         @policy.next
-        @policy.test_who_am_i(@red).should == "yellow-#{@yellow_states-1}"
+        @policy.should have_yellow_endpoint(@red, @yellow_states-1)
       end
     end
   end

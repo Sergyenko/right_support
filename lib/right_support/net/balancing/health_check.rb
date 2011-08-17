@@ -56,17 +56,6 @@ module RightSupport::Net::Balancing
       end
     end
     
-    def return_my_color(endpoint)
-      case n_level = @endpoints[endpoint][:n_level] 
-      when 0
-        "green"
-      when @yellow_states
-        "red"
-      else
-        "yellow-#{n_level}"
-      end
-    end
-    
   end
   
   # TODO docs
@@ -107,10 +96,6 @@ module RightSupport::Net::Balancing
 
     def bad(endpoint, t0, t1)
       @stack.increase_state(endpoint,t0,t1)
-    end
-    
-    def test_who_am_i(endpoint)
-      @stack.return_my_color(endpoint)
     end
     
   end
