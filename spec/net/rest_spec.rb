@@ -31,7 +31,7 @@ describe RightSupport::Net::REST do
              :url=>'/moo', :headers=>{:mrm=>1, :blah=>:foo}}
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
-        RightSupport::Net::REST.get('/moo', :mrm=>1, :blah=>:foo)
+        RightSupport::Net::REST.get('/moo', {:headers => {:mrm=>1, :blah=>:foo}})
       end
     end
 
@@ -42,7 +42,17 @@ describe RightSupport::Net::REST do
              :url=>'/moo', :headers=>{}}
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
-        RightSupport::Net::REST.get('/moo', {}, 42)
+        RightSupport::Net::REST.get('/moo', {:timeout => 42})
+      end
+    end
+    
+    context 'given a URL and any other parameters' do
+      it 'succeeds' do
+        p = {:method=>:get, :timeout=>RightSupport::Net::REST::DEFAULT_TIMEOUT,
+             :url=>'/moo', :headers=>{},:open_timeout => 1, :foo => :bar}
+        flexmock(RestClient::Request).should_receive(:execute).with(p)
+
+        RightSupport::Net::REST.get('/moo', {:open_timeout => 1, :foo => :bar})
       end
     end
   end

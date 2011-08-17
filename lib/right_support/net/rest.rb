@@ -57,37 +57,47 @@ module RightSupport::Net
   #   res.headers[:content_type]  # => 'image/jpg'
   module REST
     DEFAULT_TIMEOUT = 5
-
-    # Wrapper around RestClient.get -- see class documentation for details.
-    def self.get(url, headers={}, timeout=DEFAULT_TIMEOUT, &block)
-      request(:method=>:get, :url=>url, :timeout=>timeout, :headers=>headers, &block)
-    end
-
-    # Wrapper around RestClient.get -- see class documentation for details.
-    def self.post(url, payload, headers={}, timeout=DEFAULT_TIMEOUT, &block)
-      request(:method=>:post, :url=>url, :payload=>payload,
-              :timeout=>timeout, :headers=>headers, &block)
-    end
-
-    # Wrapper around RestClient.get -- see class documentation for details.
-    def self.put(url, payload, headers={}, timeout=DEFAULT_TIMEOUT, &block)
-      request(:method=>:put, :url=>url, :payload=>payload,
-              :timeout=>timeout, :headers=>headers, &block)
-    end
-
-    # Wrapper around RestClient.get -- see class documentation for details.
-    def self.delete(url, headers={}, timeout=DEFAULT_TIMEOUT, &block)
-      request(:method=>:delete, :url=>url, :timeout=>timeout, :headers=>headers, &block)
-    end
-
-    # Wrapper around RestClient::Request.execute -- see class documentation for details.
-    def self.request(options, &block)
-      if HAS_REST_CLIENT
-        RestClient::Request.execute(options, &block)
-      else
-        raise NoProvider, "Cannot find a suitable HTTP client library"
+    
+    class << self
+      # Wrapper around RestClient.get -- see class documentation for details.
+      def get(url, options={}, &block)
+        query(:get, url, options, &block)
       end
-    end
+      
+      # Wrapper around RestClient.get -- see class documentation for details.
+      def post(url, payload, headers={}, timeout=DEFAULT_TIMEOUT, &block)
+        request(:method=>:post, :url=>url, :payload=>payload,
+                :timeout=>timeout, :headers=>headers, &block)
+      end
 
+      # Wrapper around RestClient.get -- see class documentation for details.
+      def put(url, payload, headers={}, timeout=DEFAULT_TIMEOUT, &block)
+        request(:method=>:put, :url=>url, :payload=>payload,
+                :timeout=>timeout, :headers=>headers, &block)
+      end
+
+      # Wrapper around RestClient.get -- see class documentation for details.
+      def delete(url, headers={}, timeout=DEFAULT_TIMEOUT, &block)
+        request(:method=>:delete, :url=>url, :timeout=>timeout, :headers=>headers, &block)
+      end
+      
+      protected 
+      
+      def query(type, url, options, &block)
+        options[:timeout] ||= DEFAULT_TIMEOUT
+        options[:headers] ||= {}
+        options.merge!(:method => type, :url => url)
+        request(options, &block)
+      end
+
+      # Wrapper around RestClient::Request.execute -- see class documentation for details.
+      def request(options, &block)
+        if HAS_REST_CLIENT
+          RestClient::Request.execute(options, &block)
+        else
+          raise NoProvider, "Cannot find a suitable HTTP client library"
+        end
+      end
+    end #class << self
   end
 end
