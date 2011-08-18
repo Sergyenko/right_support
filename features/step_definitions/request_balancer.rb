@@ -10,7 +10,7 @@ When /^a client makes a load-balanced request to '(.*)' with timeout (\d+)$/ do 
   begin
     @request_balancer.request do |url|
       @request_attempts += 1
-      RightSupport::Net::REST.get("#{url}#{path}", {}, timeout)
+      RightSupport::Net::REST.get("#{url}#{path}", {:timeout => timeout})
     end
   rescue Exception => e
     @request_error = e
@@ -33,7 +33,7 @@ When /^a client makes a (buggy)? load-balanced request to '(.*)' with timeout (\
     @request_balancer.request do |url|
       @request_attempts += 1
       raise ArgumentError, "Fall down go boom!" if buggy
-      RightSupport::Net::REST.get("#{url}#{path}", {}, timeout)
+      RightSupport::Net::REST.get("#{url}#{path}", {:timeout => timeout})
     end
   rescue Exception => e
     @request_error = e
