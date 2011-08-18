@@ -90,7 +90,7 @@ module RightSupport::Net
 
       @options[:policy] ||= RightSupport::Net::Balancing::RoundRobin
       @policy = @options[:policy]
-      @policy = @policy.new(endpoints) if @policy.is_a?(Class)
+      @policy = @policy.new(endpoints,options) if @policy.is_a?(Class)
       unless test_policy_duck_type(@policy)
         raise ArgumentError, ":policy must be a class/object that responds to :next, :good and :bad"
       end
@@ -147,12 +147,10 @@ module RightSupport::Net
         t0 = Time.now
         
         
-        # TO DISCUSS:
-        # Maybe, it would be more useful to make the HealthCheck as a part of the balancing algorithm?
         # HeathCheck goes here
         if need_health_check
           begin
-            health_check.call(endpoint) ? @policy.good(endpoint, t0, Time.now) : @policy.bad(endpoint, t0, Time.now)
+            @policy.health_check(endpoint)
           rescue Exception => e
             @policy.bad(endpoint, t0, Time.now)
             next
@@ -161,12 +159,7 @@ module RightSupport::Net
 
         begin
           result   = yield(endpoint)
-          # TO DISCUSS:
-          # Do we need to send "good" at this place? Because, if we're using "green" 
-          # we no need to make it more greener. As for "yellow" EP, we've already 
-          # sent "good" after the health_check.
-          #
-          #@policy.good(endpoint, t0, Time.now)
+          @policy.good(endpoint, t0, Time.now)
           complete = true
           break
         rescue Exception => e

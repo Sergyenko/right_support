@@ -9,7 +9,8 @@ describe RightSupport::Net::Balancing::HealthCheck do
     @endpoints = [1,2,3,4,5]
     @yellow_states = 4
     @reset_time = 300
-    @policy = RightSupport::Net::Balancing::HealthCheck.new(@endpoints, @yellow_states, @reset_time)
+    @policy = RightSupport::Net::Balancing::HealthCheck.new(@endpoints, {
+                :yellow_states => @yellow_states, :reset_time => @reset_time})
     @trials = 2500
   end
 

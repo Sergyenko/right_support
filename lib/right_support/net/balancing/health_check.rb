@@ -26,7 +26,7 @@ module RightSupport::Net::Balancing
   
   class EndpointsStack
     
-    def initialize(endpoints, yellow_states, reset_time)
+    def initialize(endpoints, yellow_states=4, reset_time=300)
       @endpoints = Hash.new
       @yellow_states = yellow_states
       @reset_time = reset_time
@@ -71,7 +71,8 @@ module RightSupport::Net::Balancing
 
   class HealthCheck
     
-    def initialize(endpoints,yellow_states=4, reset_time=300)
+    def initialize(endpoints,options = {})
+      yellow_states,reset_time, @health_check = options.delete(:yellow_states),options.delete(:reset_time),options.delete(:health_check)
       @stack = EndpointsStack.new(endpoints,yellow_states,reset_time)
       @counter = rand(0xffff)
     end
@@ -96,6 +97,10 @@ module RightSupport::Net::Balancing
 
     def bad(endpoint, t0, t1)
       @stack.increase_state(endpoint,t0,t1)
+    end
+    
+    def health_check(endpoint)
+      @stack.increase_state(endpoint,t0,Time.now) unless @health_check.call(endpoint)      
     end
     
   end
