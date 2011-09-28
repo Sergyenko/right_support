@@ -1,0 +1,16 @@
+== 1.0
+
+Interface-breaking changes:
+
+* Moved logging classes (FilterLogger, SystemLogger, TagLogger) into RightSupport::Log namespace
+* Moved CassandraModel into RightSupport::DB
+* Removed RightSupport::REST module entirely. Replaced by RightSupport::Net::HTTPClient class.
+
+New functionality:
+
+* RequestBalancer now capable of using multiple policies for endpoint selection.
+  Default is RoundRobin (previously the only option); now you can choose HealthCheck
+  in addition. See rdoc for more info.
+* HTTPClient object is a thin wrapper around RestClient that adds some default timeouts.
+  It's appropriate for low-latency REST requests to nearby services; by tweaking the
+  defaults, you can use it for various other scenarios.

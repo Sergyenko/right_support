@@ -1,4 +1,0 @@
-v1.0 - Interface-breaking changes
-----
-- Remove deprecated top-level classes (loggers, cass model, ...)
-- Consolidate the :retry and :fatal options of RequestBalancer (v2.0 -- BREAKS COMPAT!)
