@@ -137,17 +137,15 @@ module RightSupport::Net
 
       retry_opt     = @options[:retry] || DEFAULT_RETRY_PROC
       health_check  = @options[:health_check]
-      
+
       while !complete
-        
         endpoint, need_health_check  = @policy.next
 
         raise NoResult, "No endpoints are available" unless endpoint
         n += 1
         t0 = Time.now
         
-        
-        # HeathCheck goes here
+        # HealthCheck goes here
         if need_health_check
           begin
             @policy.health_check(endpoint)

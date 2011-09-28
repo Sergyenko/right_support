@@ -25,11 +25,16 @@ require 'set'
 module RightSupport::Net::Balancing
   
   class EndpointsStack
-    
-    def initialize(endpoints, yellow_states=4, reset_time=300)
+
+    # Modified by Ryan Williamson on 9/28/2011 to ensure default values exist
+    # for @yellow_states and @reset_time
+    DEFAULT_YELLOW_STATES = 4
+    DEFAULT_RESET_TIME    = 300
+
+    def initialize(endpoints, yellow_states=nil, reset_time=nil)
       @endpoints = Hash.new
-      @yellow_states = yellow_states
-      @reset_time = reset_time
+      @yellow_states = yellow_states || DEFAULT_YELLOW_STATES
+      @reset_time = reset_time || DEFAULT_RESET_TIME
       endpoints.each { |ep| @endpoints[ep] = {:n_level => 0,:timestamp => 0 }}
     end
     
@@ -58,21 +63,33 @@ module RightSupport::Net::Balancing
     
   end
   
-  # TODO docs
-  #
-  # Implementation concepts: endpoints have two states, red and green. The balancer works
-  # by avoiding "red" endpoints and retrying them after awhile. Here is a brief description
-  # of the state transitions:
+  # Implementation concepts: endpoints have three states, red, yellow and green.  Yellow
+  # has several levels (@yellow_states) to determine the health of the endpoint. The
+  # balancer works by avoiding "red" endpoints and retrying them after awhile.  Here is a
+  # brief description of the state transitions:
   # * green: last request was successful.
   #    * on success: remain green
-  #    * on failure: change state to red
+  #    * on failure: change state to yellow and set it's health to healthiest (1)
   # * red: skip this server
-  #    * after @reset_time passes,
+  #    * after @reset_time passes change state to yellow and set it's health to
+  #      sickest (@yellow_states)
+  # * yellow: last request was either successful or failed
+  #    * on success: change state to green if it's health was healthiest (1), else
+  #      retain yellow state and improve it's health
+  #    * on failure: change state to red if it's health was sickest (@yellow_states), else
+  #      retain yellow state and decrease it's health
 
   class HealthCheck
     
     def initialize(endpoints,options = {})
-      yellow_states,reset_time, @health_check = options.delete(:yellow_states),options.delete(:reset_time),options.delete(:health_check)
+      # Modified by Ryan Williamson on 9/27/2011
+      # Previously if you created an instance of HealthCheck without the required options
+      # they would get passed as nil and overwrite EndpointsStack's default options causing an ArgumentError
+      yellow_states = options[:yellow_states]
+      reset_time = options[:reset_time]
+      # End modification
+      @health_check = options.delete(:health_check)
+
       @stack = EndpointsStack.new(endpoints,yellow_states,reset_time)
       @counter = rand(0xffff)
     end

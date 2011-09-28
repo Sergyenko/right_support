@@ -6,3 +6,5 @@ doc/*
 log/*
 tmp/*
 pkg/*
+.DS_Store
+nbproject/*

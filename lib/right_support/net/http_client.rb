@@ -60,7 +60,8 @@ module RightSupport::Net
   #   res.headers[:content_type]  # => 'image/jpg'
   class HTTPClient
     
-    DEFAULT_TIMEOUT = 5
+    DEFAULT_TIMEOUT       = 5
+    DEFAULT_OPEN_TIMEOUT  = 2
     
     def initialize(options = {})
       [:get, :post, :put, :delete].each do |method|
@@ -78,8 +79,9 @@ module RightSupport::Net
     end
       
     def query(type, url, options={}, &block)
-      options[:timeout] ||= DEFAULT_TIMEOUT
-      options[:headers] ||= {}
+      options[:timeout]       ||= DEFAULT_TIMEOUT
+      options[:open_timeout]  ||= DEFAULT_OPEN_TIMEOUT
+      options[:headers]       ||= {}
       options.merge!(:method => type, :url => url)
       request(options, &block)
     end
