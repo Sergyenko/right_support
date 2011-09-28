@@ -18,7 +18,9 @@ describe RightSupport::Net::HTTPClient do
 
     context 'given just a URL' do
       it 'succeeds' do
-        p = {:method=>:get, :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
+        p = {:method=>:get,
+             :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
+             :open_timeout=>RightSupport::Net::HTTPClient::DEFAULT_OPEN_TIMEOUT,
              :url=>'/moo', :headers=>{}}
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
@@ -28,7 +30,9 @@ describe RightSupport::Net::HTTPClient do
 
     context 'given a URL and headers' do
       it 'succeeds' do
-        p = {:method=>:get, :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
+        p = {:method=>:get,
+             :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
+             :open_timeout=>RightSupport::Net::HTTPClient::DEFAULT_OPEN_TIMEOUT,
              :url=>'/moo', :headers=>{:mrm=>1, :blah=>:foo}}
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
@@ -39,7 +43,9 @@ describe RightSupport::Net::HTTPClient do
 
     context 'given a timeout, no headers, and a URL' do
       it 'succeeds' do
-        p = {:method=>:get, :timeout=>42,
+        p = {:method=>:get,
+             :timeout=>42,
+             :open_timeout => RightSupport::Net::HTTPClient::DEFAULT_OPEN_TIMEOUT,
              :url=>'/moo', :headers=>{}}
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
