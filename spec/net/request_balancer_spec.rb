@@ -253,5 +253,29 @@ describe RightSupport::Net::RequestBalancer do
 
       end
     end
+
+    context 'given a class logger' do
+      before(:all) do
+        @logger = Logger.new(StringIO.new)
+        RightSupport::Net::RequestBalancer.logger = @logger
+      end
+
+      after(:all) do
+        RightSupport::Net::RequestBalancer.logger = nil
+      end
+
+      context 'when a retryable exception is raised' do
+        it 'logs an error' do
+          flexmock(@logger).should_receive(:error).times(3)
+
+          lambda {
+            balancer = RightSupport::Net::RequestBalancer.new([1,2,3])
+            balancer.request do |ep|
+              raise NoBigDeal, "Too many cows on the moon"
+            end
+          }.should raise_error(RightSupport::Net::NoResult)
+        end
+      end
+    end
   end
 end

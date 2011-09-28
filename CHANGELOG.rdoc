@@ -11,6 +11,9 @@ New functionality:
 * RequestBalancer now capable of using multiple policies for endpoint selection.
   Default is RoundRobin (previously the only option); now you can choose HealthCheck
   in addition. See rdoc for more info.
+* RequestBalancer can accept a logger as a class attribute. If supplied, any failed requests
+  will be logged with the error severity, including detailed information about exception type,
+  retryability, etc.
 * HTTPClient object is a thin wrapper around RestClient that adds some default timeouts.
   It's appropriate for low-latency REST requests to nearby services; by tweaking the
   defaults, you can use it for various other scenarios.

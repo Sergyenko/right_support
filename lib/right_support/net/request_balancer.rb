@@ -22,14 +22,6 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
-    
-    
-    ###!!! Remove it as unusable
-    # Require all of the built-in balancer policies that live in our namespace.
-    #Dir[File.expand_path('../request_balancer/*.rb', __FILE__)].each do |file|
-    #  require file
-    #end
-
     DEFAULT_RETRY_PROC = lambda do |ep, n|
       n < ep.size
     end
@@ -62,6 +54,14 @@ module RightSupport::Net
         :on_exception => nil,
         :health_check => DEFAULT_HEALTH_CHECK_PROC
     }
+
+    def self.logger
+      @@logger
+    end
+
+    def self.logger=(logger)
+      @@logger = logger
+    end
 
     def self.request(endpoints, options={}, &block)
       new(endpoints, options).request(&block)
@@ -201,6 +201,10 @@ module RightSupport::Net
       #class
       fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
 
+      if self.class.logger
+        msg = "RequestBalancer rescued #{fatal ? 'fatal' : 'retryable'} #{e.class.name} during request to #{endpoint}: #{e.message}"
+        self.class.logger.error msg
+      end
       @options[:on_exception].call(fatal, e, endpoint) if @options[:on_exception]
 
       if fatal
