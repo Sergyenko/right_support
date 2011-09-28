@@ -1,16 +1,48 @@
-When /^a client makes a load-balanced request to '(.*)' with timeout (\d+)$/ do |path, timeout|
+# Rails' constantize method to convert passed in policy to the actual class
+def constantize(camel_cased_word)
+  names = camel_cased_word.split('::')
+  names.shift if names.empty? || names.first.empty?
+
+  constant = Object
+  names.each do |name|
+    constant = constant.const_defined?(name) ? constant.const_get(name) : constant.const_missing(name)
+  end
+  constant
+end
+
+Given /^(\w+) balancing policy$/ do |policy|
+  @health_check = Proc.new do |endpoint|
+    begin
+      RightSupport::Net::HTTPClient.new.get(endpoint, {:timeout => 1, :open_timeout => 1})
+      true
+    rescue Exception => e
+      false
+    end
+  end
+
+  @options ||= { :policy => constantize("RightSupport::Net::Balancing::" + policy), :health_check => @health_check }
+end
+
+When /^a client makes a load-balanced request to '(.*)' with timeout (\d+) and open_timeout (\d+)$/ do |path, timeout, open_timeout|
   @mock_servers.should_not be_nil
   @mock_servers.empty?.should be_false
 
   timeout = timeout.to_i
+  open_timeout = open_timeout.to_i
   urls = @mock_servers.map { |s| s.url }
-  @request_balancer = RightSupport::Net::RequestBalancer.new(urls)
+
+  # Modified by Ryan Williamson on 9/27/2011 to add support for policy testing
+  @options ||= {}
+  @request_balancer = RightSupport::Net::RequestBalancer.new(urls, @options)
+  # End Modified
+  
   @request_attempts = 0
   @request_t0 = Time.now
+  @client = RightSupport::Net::HTTPClient.new
   begin
     @request_balancer.request do |url|
       @request_attempts += 1
-      RightSupport::Net::REST.get("#{url}#{path}", {}, timeout)
+      @client.get("#{url}#{path}", {:timeout => timeout, :open_timeout => open_timeout})
     end
   rescue Exception => e
     @request_error = e
@@ -18,22 +50,24 @@ When /^a client makes a load-balanced request to '(.*)' with timeout (\d+)$/ do 
   @request_t1 = Time.now
 end
 
-When /^a client makes a (buggy)? load-balanced request to '(.*)' with timeout (\d+)$/ do |buggy, path, timeout|
+When /^a client makes a (buggy)? load-balanced request to '(.*)' with timeout (\d+) and open_timeout (\d+)$/ do |buggy, path, timeout, open_timeout|
   buggy = !buggy.empty?
 
   @mock_servers.should_not be_nil
   @mock_servers.empty?.should be_false
 
   timeout = timeout.to_i
+  open_timeout = open_timeout.to_i
   urls = @mock_servers.map { |s| s.url }
   @request_balancer = RightSupport::Net::RequestBalancer.new(urls)
   @request_attempts = 0
   @request_t0 = Time.now
+  @client = RightSupport::Net::HTTPClient.new
   begin
     @request_balancer.request do |url|
       @request_attempts += 1
       raise ArgumentError, "Fall down go boom!" if buggy
-      RightSupport::Net::REST.get("#{url}#{path}", {}, timeout)
+      @client.get("#{url}#{path}", {:timeout => timeout, :open_timeout => open_timeout})
     end
   rescue Exception => e
     @request_error = e

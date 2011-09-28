@@ -44,6 +44,16 @@ class MockServer < WEBrick::HTTPServer
   end
 end
 
+# Mimic a server that exists but hangs without providing any response
+class HungServer
+  attr_accessor :port, :url
+
+  def initialize(options={})
+    @port = options[:port] || (4096 + rand(4096))
+    @url = "my.rightscale.com:#{@port}"
+  end
+end
+
 Before do
   @mock_servers = []
 end
@@ -51,7 +61,9 @@ end
 # Kill running reposes after test finishes.
 After do
   @mock_servers.each do |server|
-    server.thread.kill
+    if server.is_a?(MockServer)
+      server.thread.kill
+    end
   end
 end
 
@@ -70,13 +82,19 @@ Given /^(an?|\d+)? ([\w-]+) servers?$/ do |number, behavior|
         sleep(10)
         'Hi there! I am faulty.'
       end
+    when 'hung'
+      # no-op
     else
       raise ArgumentError, "Unknown server behavior #{behavior}"
   end
 
   number.times do
-    server = MockServer.new do |s|
-      s.mount('/', WEBrick::HTTPServlet::ProcHandler.new(proc))
+    if behavior == 'hung'
+      server = HungServer.new()
+    else
+      server = MockServer.new do |s|
+        s.mount('/', WEBrick::HTTPServlet::ProcHandler.new(proc))
+      end
     end
 
     @mock_servers << server

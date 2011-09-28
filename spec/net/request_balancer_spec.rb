@@ -47,27 +47,20 @@ describe RightSupport::Net::RequestBalancer do
     tries.should == expect.last
   end
 
-  def test_randomness(trials=25000, list=[1,2,3])
-    seen = {}
-
-    trials.times do
-      value = yield(list)
-      seen[value] ||= 0
-      seen[value] += 1
-    end
-
-    #Load should be evenly distributed
-    chance = 1.0 / list.size
-    seen.each_pair do |_, count|
-      (Float(count) / Float(trials)).should be_close(chance, 0.025) #allow 5% margin of error
-    end
-  end
-
   context :initialize do
     it 'requires a list of endpoint URLs' do
       lambda do
         RightSupport::Net::RequestBalancer.new(nil)
       end.should raise_exception(ArgumentError)
+    end
+
+    context 'with :retry option' do
+      it 'when :retry is Integer, stops after N total tries' do
+        pending
+      end
+      it 'when :retry is Proc, stops when call evaluates to true' do
+        pending
+      end
     end
 
     context 'with :fatal option' do
@@ -91,6 +84,59 @@ describe RightSupport::Net::RequestBalancer do
         end.should raise_error(ArgumentError)
       end
     end
+    
+    context 'with :policy option' do
+      it 'accepts a Class' do
+        policy = RightSupport::Net::Balancing::RoundRobin
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
+        }.should_not raise_error
+      end
+
+      it 'accepts an object' do
+        policy = RightSupport::Net::Balancing::RoundRobin.new([1,2])
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>policy)
+        }.should_not raise_error
+      end
+
+      it 'checks for duck-type compatibility' do
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>String)
+        }.should raise_error
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :policy=>'I like cheese')
+        }.should raise_error
+      end
+    end
+    
+    context 'with :health_check option' do
+      
+      before(:each) do
+        @health_check = Proc.new {|endpoint| "HealthCheck passed for #{endpoint}!" }
+      end
+      
+      it 'accepts a block' do
+        lambda {
+          RightSupport::Net::RequestBalancer.new([1,2], :health_check => @health_check)
+        }.should_not raise_error
+      end
+      
+      it 'calls specified block' do 
+        @balancer = RightSupport::Net::RequestBalancer.new([1,2], :health_check => @health_check)
+        @options = @balancer.instance_variable_get("@options")
+        @options[:health_check].call(1).should be_eql("HealthCheck passed for 1!")
+      end
+      
+    end
+    
+    context 'with default :health_check option' do
+      it 'calls default block' do 
+        @balancer = RightSupport::Net::RequestBalancer.new([1,2])
+        @options = @balancer.instance_variable_get("@options")
+        @options[:health_check].call(1).should be_true
+      end
+    end
   end
 
   context :request do
@@ -98,29 +144,6 @@ describe RightSupport::Net::RequestBalancer do
       lambda do
         RightSupport::Net::RequestBalancer.new([1]).request
       end.should raise_exception(ArgumentError)
-    end
-
-    context 'when called as a class method' do
-      it 'shuffles randomly' do
-
-        test_randomness do |list|
-          RightSupport::Net::RequestBalancer.request(list) do |endpoint|
-            endpoint
-          end
-        end
-      end
-    end
-
-    context 'when called as an instance method' do
-      it 'shuffles randomly' do
-
-        test_randomness do |list|
-          @balancer ||= RightSupport::Net::RequestBalancer.new(list)
-          @balancer.request do |endpoint|
-            endpoint
-          end
-        end
-      end
     end
 
     it 'retries until a request completes' do

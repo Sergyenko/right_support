@@ -2,10 +2,14 @@ module RightSupport::Net
   # Raised to indicate the (uncommon) error condition where a RequestBalancer rotated
   # through EVERY URL in a list without getting a non-nil, non-timeout response. 
   class NoResult < Exception; end
-
+  
   # Utility class that allows network requests to be randomly distributed across
   # a set of network endpoints. Generally used for REST requests by passing an
   # Array of HTTP service endpoint URLs.
+  #
+  # Note that this class also serves as a namespace for endpoint selection policies,
+  # which are classes that actually choose the next endpoint based on some criterion
+  # (round-robin, health of endpoint, response time, etc).
   #
   # The balancer does not actually perform requests by itself, which makes this
   # class usable for various network protocols, and potentially even for non-
@@ -18,6 +22,18 @@ module RightSupport::Net
   # MAY NOT BE SUFFICIENT for some uses of the request balancer! Please use the :fatal
   # option if you need different behavior.
   class RequestBalancer
+    
+    
+    ###!!! Remove it as unusable
+    # Require all of the built-in balancer policies that live in our namespace.
+    #Dir[File.expand_path('../request_balancer/*.rb', __FILE__)].each do |file|
+    #  require file
+    #end
+
+    DEFAULT_RETRY_PROC = lambda do |ep, n|
+      n < ep.size
+    end
+
     DEFAULT_FATAL_EXCEPTIONS = [ScriptError, ArgumentError, IndexError, LocalJumpError, NameError]
 
     DEFAULT_FATAL_PROC = lambda do |e|
@@ -35,9 +51,16 @@ module RightSupport::Net
       end
     end
 
+    DEFAULT_HEALTH_CHECK_PROC = Proc.new do |endpoint|
+      true
+    end
+
     DEFAULT_OPTIONS = {
+        :policy       => nil,
+        :retry        => DEFAULT_RETRY_PROC,
         :fatal        => DEFAULT_FATAL_PROC,
-        :on_exception => nil
+        :on_exception => nil,
+        :health_check => DEFAULT_HEALTH_CHECK_PROC
     }
 
     def self.request(endpoints, options={}, &block)
@@ -52,22 +75,40 @@ module RightSupport::Net
     # endpoints(Array):: a set of network endpoints (e.g. HTTP URLs) to be load-balanced
     #
     # === Options
-    # fatal(Class):: a class, list of classes or decision Proc to determine whether an exception is fatal and should not be retried
-    # on_exception(Proc|Lambda):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
+    # retry:: a Class, array of Class or decision Proc to determine whether to keep retrying; default is to try all endpoints
+    # fatal:: a Class, array of Class, or decision Proc to determine whether an exception is fatal and should not be retried
+    # on_exception(Proc):: notification hook that accepts three arguments: whether the exception is fatal, the exception itself, and the endpoint for which the exception happened
+    # health_check(Proc):: callback that allows balancer to check an endpoint health; should raise an exception if the endpoint is not healthy
     #
     def initialize(endpoints, options={})
+      
       @options = DEFAULT_OPTIONS.merge(options)
 
       unless endpoints && !endpoints.empty?
         raise ArgumentError, "Must specify at least one endpoint"
       end
 
-      unless test_callable_arity(options[:fatal], 1, true)
+      @options[:policy] ||= RightSupport::Net::Balancing::RoundRobin
+      @policy = @options[:policy]
+      @policy = @policy.new(endpoints,options) if @policy.is_a?(Class)
+      unless test_policy_duck_type(@policy)
+        raise ArgumentError, ":policy must be a class/object that responds to :next, :good and :bad"
+      end
+
+      unless test_callable_arity(options[:retry], 2)
+        raise ArgumentError, ":retry callback must accept two parameters"
+      end
+
+      unless test_callable_arity(options[:fatal], 1)
         raise ArgumentError, ":fatal callback must accept one parameter"
       end
 
       unless test_callable_arity(options[:on_exception], 3, false)
         raise ArgumentError, ":on_exception callback must accept three parameters"
+      end
+
+      unless test_callable_arity(options[:health_check], 1, false)
+        raise ArgumentError, ":health_check callback must accept one parameters"
       end
 
       @endpoints = endpoints.shuffle
@@ -94,27 +135,51 @@ module RightSupport::Net
       complete   = false
       n          = 0
 
-      while !complete && n < @endpoints.size
-        endpoint = next_endpoint
+      retry_opt     = @options[:retry] || DEFAULT_RETRY_PROC
+      health_check  = @options[:health_check]
+
+      while !complete
+        endpoint, need_health_check  = @policy.next
+
+        raise NoResult, "No endpoints are available" unless endpoint
         n += 1
+        t0 = Time.now
+        
+        # HealthCheck goes here
+        if need_health_check
+          begin
+            @policy.health_check(endpoint)
+          rescue Exception => e
+            @policy.bad(endpoint, t0, Time.now)
+            next
+          end
+        end
 
         begin
           result   = yield(endpoint)
+          @policy.good(endpoint, t0, Time.now)
           complete = true
           break
         rescue Exception => e
+          @policy.bad(endpoint, t0, Time.now)
           if to_raise = handle_exception(endpoint, e)
             raise(to_raise)
           else
             exceptions << e
           end
         end
+
+        unless complete
+          max_n = retry_opt
+          max_n = max_n.call(@endpoints, n) if max_n.respond_to?(:call)
+          break if (max_n.is_a?(Integer) && n >= max_n) || !(max_n)
+        end
       end
 
       return result if complete
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
-      raise NoResult, "All URLs in the rotation failed! Exceptions: #{exceptions}"
+      raise NoResult, "No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
     end
 
     protected
@@ -146,16 +211,13 @@ module RightSupport::Net
       end
     end
 
-    def next_endpoint
-      @round_robin ||= 0
-      result = @endpoints[ @round_robin % @endpoints.size ]
-      @round_robin += 1
-      return result
+    def test_policy_duck_type(object)
+      [:next, :good, :bad].all? { |m| object.respond_to?(m) }
     end
 
     # Test that something is a callable (Proc, Lambda or similar) with the expected arity.
     # Used mainly by the initializer to test for correct options.
-    def test_callable_arity(callable, arity, optional)
+    def test_callable_arity(callable, arity, optional=true)
       return true if callable.nil?
       return true if optional && !callable.respond_to?(:call)
       return callable.respond_to?(:arity) && (callable.arity == arity)

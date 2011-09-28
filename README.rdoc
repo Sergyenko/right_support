@@ -65,17 +65,20 @@ any exceptions. (NB: a nil return value counts as success!!) If you specify that
 certain class of exception is "fatal," then that exception will cause REST to re-
 raise immediately
 
-== HTTP REST Client
+== HTTPClient
 
 We provide a very thin wrapper around the rest-client gem that enables simple but
 robust rest requests with a timeout, headers, etc.
 
-The RightSupport::Net::REST module is interface-compatible with the RestClient
+The HTTPClient is interface-compatible with the RestClient
 module, but allows an optional timeout to be specified as an extra parameter.
-
+   
+   # Create a wrapper's object
+   @client = RightSupport::Net::HTTPClient.new
+   
    # Default timeout is 5 seconds
-   RightSupport::Net::REST.get('http://localhost')
+   @client.get('http://localhost')
 
-   # Make sure the REST request fails after 1 second so we can report an error
+   # Make sure the HTTPClient request fails after 1 second so we can report an error
    # and move on!
-   RightSupport::Net::REST.get('http://localhost', {'X-Hello'=>'hi!'}, 1)
+   @client.get('http://localhost', {:headers => {'X-Hello'=>'hi!'}, :timeout => 1)}
