@@ -32,7 +32,7 @@ module RightSupport::DB
         return @@conn if @@conn
 
         config = @@config[ENV["RACK_ENV"]]
-        @@conn = Cassandra.new(keyspace, config["server"],{:timeout => RightSupport::CassandraModel::DEFAULT_TIMEOUT})
+        @@conn = Cassandra.new(keyspace, config["server"],{:timeout => RightSupport::DB::CassandraModel::DEFAULT_TIMEOUT})
         @@conn.disable_node_auto_discovery!
         @@conn
       end
