@@ -201,7 +201,7 @@ module RightSupport::Net
       #class
       fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
 
-      if self.class.logger
+      if RequestBalancer.class_variable_defined?(:@@logger) && self.class.logger
         msg = "RequestBalancer rescued #{fatal ? 'fatal' : 'retryable'} #{e.class.name} during request to #{endpoint}: #{e.message}"
         self.class.logger.error msg
       end
