@@ -55,6 +55,8 @@ module RightSupport::Net
         :health_check => DEFAULT_HEALTH_CHECK_PROC
     }
 
+    @@logger = nil
+    
     def self.logger
       @@logger
     end
