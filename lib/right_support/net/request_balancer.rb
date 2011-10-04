@@ -55,6 +55,8 @@ module RightSupport::Net
         :health_check => DEFAULT_HEALTH_CHECK_PROC
     }
 
+    @@logger = nil
+    
     def self.logger
       @@logger
     end
@@ -201,7 +203,7 @@ module RightSupport::Net
       #class
       fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
 
-      if RequestBalancer.class_variable_defined?(:@@logger) && self.class.logger
+      if self.class.logger
         msg = "RequestBalancer rescued #{fatal ? 'fatal' : 'retryable'} #{e.class.name} during request to #{endpoint}: #{e.message}"
         self.class.logger.error msg
       end
