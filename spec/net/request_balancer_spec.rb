@@ -266,7 +266,7 @@ describe RightSupport::Net::RequestBalancer do
 
       context 'when a retryable exception is raised' do
         it 'logs an error' do
-          flexmock(@logger).should_receive(:error).times(3)
+          flexmock(@logger).should_receive(:error).times(4)
 
           lambda {
             balancer = RightSupport::Net::RequestBalancer.new([1,2,3])

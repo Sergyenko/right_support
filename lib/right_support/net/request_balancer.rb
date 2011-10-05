@@ -182,7 +182,7 @@ module RightSupport::Net
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
       if self.class.logger
         msg = "RequestBalancer: No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
-        self.class.logger.info msg
+        self.class.logger.error msg
       end
       raise NoResult, "No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
     end
