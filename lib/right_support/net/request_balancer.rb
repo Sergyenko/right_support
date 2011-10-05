@@ -83,7 +83,6 @@ module RightSupport::Net
     # health_check(Proc):: callback that allows balancer to check an endpoint health; should raise an exception if the endpoint is not healthy
     #
     def initialize(endpoints, options={})
-      
       @options = DEFAULT_OPTIONS.merge(options)
 
       unless endpoints && !endpoints.empty?
@@ -181,6 +180,10 @@ module RightSupport::Net
       return result if complete
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
+      if self.class.logger
+        msg = "RequestBalancer: No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
+        self.class.logger.info msg
+      end
       raise NoResult, "No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
     end
 
