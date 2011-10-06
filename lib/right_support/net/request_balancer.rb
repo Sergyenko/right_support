@@ -160,8 +160,11 @@ module RightSupport::Net
             @policy.health_check(endpoint)
           rescue Exception => e
             @policy.bad(endpoint, t0, Time.now)
+            log_error("RequestBalancer: health check failed to #{endpoint}")
             next
           end
+
+          log_info("RequestBalancer: health check succeeded to #{endpoint}")
         end
 
         begin
@@ -184,10 +187,7 @@ module RightSupport::Net
 
       exceptions = exceptions.map { |e| e.class.name }.uniq.join(', ')
       msg = "No available endpoints from #{@endpoints.inspect}! Exceptions: #{exceptions}"
-      if self.class.logger
-        msg = "RequestBalancer: #{msg}"
-        self.class.logger.error msg
-      end
+      log_error("RequestBalancer: #{msg}")
       raise NoResult, msg
     end
 
@@ -209,11 +209,8 @@ module RightSupport::Net
       #whether the exception we're handling is an instance of any mentioned exception
       #class
       fatal = fatal.any?{ |c| e.is_a?(c) } if fatal.respond_to?(:any?)
-
-      if self.class.logger
-        msg = "RequestBalancer rescued #{fatal ? 'fatal' : 'retryable'} #{e.class.name} during request to #{endpoint}: #{e.message}"
-        self.class.logger.error msg
-      end
+      msg = "RequestBalancer: rescued #{fatal ? 'fatal' : 'retryable'} #{e.class.name} during request to #{endpoint}: #{e.message}"
+      log_error msg
       @options[:on_exception].call(fatal, e, endpoint) if @options[:on_exception]
 
       if fatal
@@ -235,6 +232,17 @@ module RightSupport::Net
       return true if optional && !callable.respond_to?(:call)
       return callable.respond_to?(:arity) && (callable.arity == arity)
     end
+
+    # Log an info message with the class logger, if provided
+    def log_info(*args)
+      self.class.logger.__send__(:info, *args) if self.class.logger.respond_to?(:info)
+    end
+
+    # Log an error message with the class logger, if provided
+    def log_error(*args)
+      self.class.logger.__send__(:error, *args) if self.class.logger.respond_to?(:error)
+    end
+
   end # RequestBalancer
 
 end # RightScale
