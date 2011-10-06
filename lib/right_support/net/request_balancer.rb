@@ -139,13 +139,21 @@ module RightSupport::Net
       retry_opt     = @options[:retry] || DEFAULT_RETRY_PROC
       health_check  = @options[:health_check]
 
-      while !complete
+      loop do
+        if complete
+          break
+        else
+          max_n = retry_opt
+          max_n = max_n.call(@endpoints, n) if max_n.respond_to?(:call)
+          break if (max_n.is_a?(Integer) && n >= max_n) || !(max_n)
+        end
+
         endpoint, need_health_check  = @policy.next
 
         raise NoResult, "No endpoints are available" unless endpoint
         n += 1
         t0 = Time.now
-        
+
         # HealthCheck goes here
         if need_health_check
           begin
@@ -170,11 +178,6 @@ module RightSupport::Net
           end
         end
 
-        unless complete
-          max_n = retry_opt
-          max_n = max_n.call(@endpoints, n) if max_n.respond_to?(:call)
-          break if (max_n.is_a?(Integer) && n >= max_n) || !(max_n)
-        end
       end
 
       return result if complete
