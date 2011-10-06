@@ -160,7 +160,7 @@ module RightSupport::Net
             @policy.health_check(endpoint)
           rescue Exception => e
             @policy.bad(endpoint, t0, Time.now)
-            log_error("RequestBalancer: health check failed to #{endpoint}")
+            log_error("RequestBalancer: health check failed to #{endpoint} because of #{e.class.name}: #{e.message}")
             next
           end
 
