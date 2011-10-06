@@ -47,6 +47,33 @@ describe RightSupport::Net::RequestBalancer do
     tries.should == expect.last
   end
 
+  def test_bad_endpoint_requests(number_of_endpoints)
+    test = Proc.new do |endpoint|
+      @health_checks += 1
+      false
+    end
+
+    expect = number_of_endpoints
+    yellow_states = 4
+    rb = RightSupport::Net::RequestBalancer.new((1..expect).to_a,
+                                                :policy => RightSupport::Net::Balancing::HealthCheck,
+                                                :health_check => test,
+                                                :yellow_states => yellow_states)
+    @health_checks = 1
+    tries = 0
+    l = lambda do
+      rb.request do |endpoint|
+        tries += 1
+        raise Exception
+      end
+    end
+    yellow_states.times do
+      l.should raise_error
+    end
+    tries.should == expect
+    @health_checks.should == expect * yellow_states
+  end
+
   context :initialize do
     it 'requires a list of endpoint URLs' do
       lambda do
@@ -127,7 +154,7 @@ describe RightSupport::Net::RequestBalancer do
         @options = @balancer.instance_variable_get("@options")
         @options[:health_check].call(1).should be_eql("HealthCheck passed for 1!")
       end
-      
+     
     end
     
     context 'with default :health_check option' do
@@ -275,6 +302,13 @@ describe RightSupport::Net::RequestBalancer do
             end
           }.should raise_error(RightSupport::Net::NoResult)
         end
+      end
+    end
+    
+    context 'given a class health check policy' do
+      it 'retries and health checks the correct number of times' do
+        test_bad_endpoint_requests(1)
+        #(1..10).to_a.each {|endpoint| test_bad_endpoint_requests(endpoint) }
       end
     end
   end
