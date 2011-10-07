@@ -1,12 +1,39 @@
 require 'spec_helper'
 
 describe RightSupport::Net::HTTPClient do
-  it 'is interface-compatible with RestClient' do
+  it 'has a distinct method for common HTTP verbs' do
     @client = RightSupport::Net::HTTPClient.new()
     @client.should respond_to(:get)
     @client.should respond_to(:post)
     @client.should respond_to(:put)
     @client.should respond_to(:delete)
+  end
+
+  context 'with defaults passed to initializer' do
+    before(:all) do
+      @client = RightSupport::Net::HTTPClient.new(:open_timeout=>999, :timeout=>101010,
+                                                  :headers=>{:moo=>:bah})
+    end
+
+    context :request do
+      it 'uses default options on every request' do
+        p = {:method=>:get,
+             :timeout=>101010,
+             :open_timeout=>999,
+             :url=>'/moo', :headers=>{:moo=>:bah}}
+        flexmock(RestClient::Request).should_receive(:execute).with(p)
+        @client.get('/moo')
+      end
+
+      it 'allows defaults to be overridden' do
+        p = {:method=>:get,
+             :timeout=>101010,
+             :open_timeout=>3,
+             :url=>'/moo', :headers=>{:joe=>:blow}}
+        flexmock(RestClient::Request).should_receive(:execute).with(p)
+        @client.get('/moo', :open_timeout=>3, :headers=>{:joe=>:blow})
+      end
+    end
   end
 
   context :request do
@@ -55,11 +82,11 @@ describe RightSupport::Net::HTTPClient do
     
     context 'given a URL and any other parameters' do
       it 'succeeds' do
-        p = {:method=>:get, :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
-             :url=>'/moo', :headers=>{},:open_timeout => 1, :foo => :bar}
+        p = { :method=>:get, :timeout=>RightSupport::Net::HTTPClient::DEFAULT_TIMEOUT,
+              :url=>'/moo', :headers=>{},:open_timeout => 1, :payload=>{:foo => :bar} }
         flexmock(RestClient::Request).should_receive(:execute).with(p)
 
-        @client.get('/moo', {:open_timeout => 1, :foo => :bar})
+        @client.get('/moo', :open_timeout => 1, :payload=>{:foo => :bar})
       end
     end
   end

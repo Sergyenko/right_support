@@ -16,20 +16,19 @@ module RightSupport::Net
   class NoProvider < Exception; end
   
   #
-  # A wrapper for the rest-client gem that provides timeouts and other useful features while preserving
-  # the simplicity and ease of use of RestClient's simple, static (class-level) interface.
+  # A wrapper for the rest-client gem that provides timeouts that make it harder to misuse RestClient.
   #
   # Even though this code relies on RestClient, the right_support gem does not depend on the rest-client
   # gem because not all users of right_support will want to make use of this interface. If one of HTTPClient
   # instance's method is called and RestClient is not available, an exception will be raised.
   #
   #
-  # HTTPClient supports a subset of the module methods provided by RestClient and is interface-compatible
-  # with those methods it replaces; the only difference is that the HTTPClient version of each method accepts an
-  # additional, optional parameter which is a request timeout in seconds. The RestClient gem does not allow
-  # timeouts without instantiating a "heavyweight" HTTPClient object.
+  # HTTPClient is a thin wrapper around the RestClient::Request class, with a few minor changes to its
+  # interface:
+  #  * initializer accepts some default request options that can be overridden per-request
+  #  * it has discrete methods for get/put/post/delete, instead of a single "request" method
   #
-  #   # create an instance ot HTTPClient
+  #   # create an instance ot HTTPClient with some default request options
   #   @client = HTTPClient.new()
   #
   #   # GET
@@ -63,31 +62,61 @@ module RightSupport::Net
     DEFAULT_TIMEOUT       = 5
     DEFAULT_OPEN_TIMEOUT  = 2
     
-    def initialize(options = {})
-      [:get, :post, :put, :delete].each do |method|
-         define_instance_method(method) {|*args| query(method, *args)}
-      end
+    def initialize(defaults = {})
+      @defaults = defaults.clone
+      @defaults[:timeout]      ||= DEFAULT_TIMEOUT
+      @defaults[:open_timeout] ||= DEFAULT_OPEN_TIMEOUT
+      @defaults[:headers]      ||= {}
+    end
+
+    def get(*args)
+      request(:get, *args)
+    end
+
+    def post(*args)
+      request(:post, *args)
+    end
+
+    def put(*args)
+      request(:put, *args)
+    end
+
+    def delete(*args)
+      request(:delete, *args)
+    end
+
+  # A very thin wrapper around RestClient::Request.execute.
+  #
+  # === Parameters
+  # type(Symbol):: an HTTP verb, e.g. :get, :post, :put or :delete
+  # url(String):: the URL to request, including any query-string parameters
+  #
+  # === Options
+  # This method can accept any of the options that RestClient::Request can accept, since
+  # all options are proxied through after merging in defaults, etc. Interesting options:
+  # * :payload - hash containing the request body (e.g. POST or PUT parameters)
+  # * :headers - hash containing additional HTTP request headers
+  # * :cookies - will replace possible cookies in the :headers
+  # * :user and :password - for basic auth, will be replaced by a user/password available in the url
+  # * :raw_response - return a low-level RawResponse instead of a Response
+  # * :verify_ssl - enable ssl verification, possible values are constants from OpenSSL::SSL
+  # * :timeout and :open_timeout - specify overall request timeout + socket connect timeout
+  # * :ssl_client_cert, :ssl_client_key, :ssl_ca_file
+  #
+  # === Block
+  # If the request succeeds, this method will yield the response body to its block.
+  #
+    def request(type, url, options={}, &block)
+      options = @defaults.merge(options)
+      options.merge!(:method => type, :url => url)
+
+      request_internal(options, &block)
     end
 
     protected
     
-    # Helps to add default methods to class
-    def define_instance_method(method, &block)
-      (class << self; self; end).module_eval do
-        define_method(method, &block)
-      end
-    end
-      
-    def query(type, url, options={}, &block)
-      options[:timeout]       ||= DEFAULT_TIMEOUT
-      options[:open_timeout]  ||= DEFAULT_OPEN_TIMEOUT
-      options[:headers]       ||= {}
-      options.merge!(:method => type, :url => url)
-      request(options, &block)
-    end
-
     # Wrapper around RestClient::Request.execute -- see class documentation for details.
-    def request(options, &block)
+    def request_internal(options, &block)
       if HAS_REST_CLIENT
         RestClient::Request.execute(options, &block)
       else
