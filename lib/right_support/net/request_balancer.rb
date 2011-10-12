@@ -233,14 +233,16 @@ module RightSupport::Net
       return callable.respond_to?(:arity) && (callable.arity == arity)
     end
 
-    # Log an info message with the class logger, if provided
+    # Log an info message with the class logger, if provided.  Can't duck type because some loggers
+    # use fallback methods to perform their logging and don't respond_to?() :info or :error
     def log_info(*args)
-      self.class.logger.__send__(:info, *args) if self.class.logger.respond_to?(:info)
+      self.class.logger.__send__(:info, *args) unless self.class.logger.nil?
     end
 
-    # Log an error message with the class logger, if provided
+    # Log an error message with the class logger, if provided. Can't duck type because some loggers
+    # use fallback methods to perform their logging and don't respond_to?() :info or :error
     def log_error(*args)
-      self.class.logger.__send__(:error, *args) if self.class.logger.respond_to?(:error)
+      self.class.logger.__send__(:error, *args) unless self.class.logger.nil?
     end
 
   end # RequestBalancer
