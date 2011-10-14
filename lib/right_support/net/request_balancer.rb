@@ -191,6 +191,29 @@ module RightSupport::Net
       raise NoResult, msg
     end
 
+    # Provide an interface so one can query the RequestBalancer for statistics on
+    # it's endpoints.  Merely proxies the balancing policy's get_stats method. If
+    # no method exists in the balancing policy, a hash of endpoints with "n/a" is
+    # returned.
+    # 
+    # Examples
+    #
+    # A RequestBalancer created with endpoints [1,2,3,4,5] and using a HealthCheck
+    # balancing policy may return:
+    #
+    # {5 => "yellow-3", 1 => "red", 2 => "yellow-1", 3 => "green", 4 => "yellow-2"}
+    #
+    # A RequestBalancer created with endpoints [1,2,3,4,5] and specifying no
+    # balancing policy or using the default RoundRobin balancing policy may return:
+    #
+    # {2 => "n/a", 1 => "n/a", 3 => "n/a"}
+    def get_stats
+      stats = {}
+      @endpoints.each { |endpoint| stats[endpoint] = 'n/a' }
+      stats = @policy.get_stats if @policy.respond_to?(:get_stats)
+      stats
+    end
+
     protected
 
     # Decide what to do with an exception. The decision is influenced by the :fatal

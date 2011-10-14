@@ -84,6 +84,12 @@ describe RightSupport::Net::RequestBalancer do
     context 'with :retry option' do
       it 'when :retry is Integer, stops after N total tries' do
         pending
+        health_check = Proc.new do |endpoint|
+          return false
+        end
+        lambda do
+          RightSupport::Net::RequestBalancer.new([1])
+        end.should raise_error
       end
       it 'when :retry is Proc, stops when call evaluates to true' do
         pending
@@ -309,6 +315,32 @@ describe RightSupport::Net::RequestBalancer do
       it 'retries and health checks the correct number of times' do
         test_bad_endpoint_requests(1)
         #(1..10).to_a.each {|endpoint| test_bad_endpoint_requests(endpoint) }
+      end
+    end
+  end
+
+  context :get_stats do
+    context 'using default balancing profile' do
+      it 'returns stats in an endpoint-keyed hash' do
+        expected_hash = {}
+        list = [1,2,3,4]
+        list.each { |k| expected_hash[k] = 'n/a' }
+        rb = RightSupport::Net::RequestBalancer.new(list)
+
+        rb.get_stats.should_not be_nil
+        rb.get_stats.should == expected_hash
+      end
+    end
+    
+    context 'using health check balancing profile' do
+      it 'returns stats in an endpoint-keyed hash' do
+        expected_hash = {}
+        list = [1,2,3,4]
+        rb = RightSupport::Net::RequestBalancer.new(list,
+                                                :policy => RightSupport::Net::Balancing::HealthCheck,
+                                                :health_check => Proc)
+        rb.get_stats.should_not be_nil
+        rb.get_stats.should_not == expected_hash
       end
     end
   end

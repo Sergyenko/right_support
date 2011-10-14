@@ -25,12 +25,13 @@ require 'set'
 module RightSupport::Net::Balancing
   
   class EndpointsStack
-
-    # Modified by Ryan Williamson on 9/28/2011 to ensure default values exist
-    # for @yellow_states and @reset_time
     DEFAULT_YELLOW_STATES = 4
     DEFAULT_RESET_TIME    = 300
 
+    def endpoints
+      @endpoints
+    end
+    
     def initialize(endpoints, yellow_states=nil, reset_time=nil)
       @endpoints = Hash.new
       @yellow_states = yellow_states || DEFAULT_YELLOW_STATES
@@ -59,6 +60,18 @@ module RightSupport::Net::Balancing
         @endpoints[endpoint][:n_level]    += 1
         @endpoints[endpoint][:timestamp]  = t1
       end
+    end
+
+    # Returns a hash of endpoints and their colored health status
+    # Useful for logging and debugging
+    def get_stats
+      stats = {}
+      @endpoints.each do |k, v|
+        stats[k] = 'green' if v[:n_level] == 0
+        stats[k] = 'red' if v[:n_level] == @yellow_states
+        stats[k] = "yellow-#{v[:n_level]}" if v[:n_level] > 0 && v[:n_level] < @yellow_states
+      end
+      stats
     end
     
   end
@@ -118,6 +131,11 @@ module RightSupport::Net::Balancing
     
     def health_check(endpoint)
       @stack.increase_state(endpoint,t0,Time.now) unless @health_check.call(endpoint)      
+    end
+
+    # Proxy to EndpointStack
+    def get_stats
+      @stack.get_stats
     end
     
   end

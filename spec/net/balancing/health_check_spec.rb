@@ -180,4 +180,45 @@ describe RightSupport::Net::Balancing::HealthCheck do
       
     end
   end
+
+  context :get_stats do
+    context 'given all green servers' do
+      it 'reports all endpoints as green' do
+        expected_stats = {}
+        @endpoints.each { |ep| expected_stats[ep] = 'green' }
+        
+        @policy.get_stats.should_not be_nil
+        @policy.get_stats.should == expected_stats
+      end
+    end
+
+    context 'given all red servers' do
+      it 'reports all endpoints as red' do
+        expected_stats = {}
+        @endpoints.each { |ep| expected_stats[ep] = 'red' }
+
+        @endpoints.each do |endpoint|
+          @yellow_states.times { @policy.bad(endpoint, 0, Time.now) }
+        end
+
+        @policy.get_stats.should_not be_nil
+        @policy.get_stats.should == expected_stats
+      end
+    end
+
+    context 'given all yellow-N servers' do
+      it 'reports all endpoints as yellow-N' do
+        expected_stats = {}
+        @endpoints.each { |ep| expected_stats[ep] = "yellow-#{@yellow_states - 1}" }
+
+        @endpoints.each do |endpoint|
+          @yellow_states.times { @policy.bad(endpoint, 0, Time.now) }
+          @policy.good(endpoint, 0, Time.now)
+        end
+
+        @policy.get_stats.should_not be_nil
+        @policy.get_stats.should == expected_stats
+      end
+    end
+  end
 end
