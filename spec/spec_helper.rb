@@ -90,5 +90,41 @@ def should_be_chosen_fairly(seen,trials,size)
   end
 end
 
+RANDOM_KEY_CLASSES   = [String, Integer, Float, TrueClass, FalseClass]
+RANDOM_VALUE_CLASSES = RANDOM_KEY_CLASSES + [Array, Hash]
 
+def random_value(klass=nil, depth=0)
+  if klass.nil?
+    if depth < 3
+      klasses = RANDOM_VALUE_CLASSES
+    else
+      klasses = RANDOM_KEY_CLASSES
+    end
 
+    klass = klasses[rand(klasses.size)]
+  end
+
+  if klass == String
+    result = ''
+    rand(40).times { result << (?a + rand(26)) }
+  elsif klass == Integer
+    result = rand(0xffffff)
+  elsif klass == Float
+    result = rand(0xffffff) * rand
+  elsif klass == TrueClass
+    result = true
+  elsif klass == FalseClass
+    result = false
+  elsif klass == Array
+    result = []
+    rand(10).times { result << random_value(nil, depth+1) }
+  elsif klass == Hash
+    result = {}
+    key_type = RANDOM_KEY_CLASSES[rand(RANDOM_KEY_CLASSES.size)]
+    rand(10).times { result[random_value(key_type, depth+1)] = random_value(nil, depth+1) }
+  else
+    raise ArgumentError, "Unknown random value type #{klass}"
+  end
+
+  result
+end
