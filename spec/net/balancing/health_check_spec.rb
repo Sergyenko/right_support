@@ -148,6 +148,22 @@ describe RightSupport::Net::Balancing::HealthCheck do
       it 'demands a health check for yellow servers' do
         pending
       end
+      
+      it "maintains the same order of green and yellow servers" do
+        actual = []
+        expected = [3,4,1,2]
+
+        endpoints = [1,2,3,4]
+        policy = RightSupport::Net::Balancing::HealthCheck.new(endpoints, :yellow_states => 1)
+        policy.instance_variable_set(:@counter, 1)
+        endpoints.size.times do
+          endpoint, yellow = policy.next
+          policy.bad(endpoint, 0, Time.now) unless endpoint == 4
+          actual << endpoint
+        end
+
+        actual.should == expected
+      end
     end
 
     context 'when @reset_time has passed since a server became red' do

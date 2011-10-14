@@ -59,7 +59,7 @@ describe RightSupport::Net::RequestBalancer do
                                                 :policy => RightSupport::Net::Balancing::HealthCheck,
                                                 :health_check => test,
                                                 :yellow_states => yellow_states)
-    @health_checks = 1
+    @health_checks = 0
     tries = 0
     l = lambda do
       rb.request do |endpoint|
@@ -71,7 +71,7 @@ describe RightSupport::Net::RequestBalancer do
       l.should raise_error
     end
     tries.should == expect
-    @health_checks.should == expect * yellow_states
+    @health_checks.should == expect * (yellow_states - 1)
   end
 
   context :initialize do
@@ -313,8 +313,7 @@ describe RightSupport::Net::RequestBalancer do
     
     context 'given a class health check policy' do
       it 'retries and health checks the correct number of times' do
-        test_bad_endpoint_requests(1)
-        #(1..10).to_a.each {|endpoint| test_bad_endpoint_requests(endpoint) }
+        (1..10).to_a.each {|endpoint| test_bad_endpoint_requests(endpoint) }
       end
     end
   end

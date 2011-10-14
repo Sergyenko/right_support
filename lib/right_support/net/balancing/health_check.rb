@@ -27,10 +27,6 @@ module RightSupport::Net::Balancing
   class EndpointsStack
     DEFAULT_YELLOW_STATES = 4
     DEFAULT_RESET_TIME    = 300
-
-    def endpoints
-      @endpoints
-    end
     
     def initialize(endpoints, yellow_states=nil, reset_time=nil)
       @endpoints = Hash.new
@@ -95,16 +91,14 @@ module RightSupport::Net::Balancing
   class HealthCheck
     
     def initialize(endpoints,options = {})
-      # Modified by Ryan Williamson on 9/27/2011
-      # Previously if you created an instance of HealthCheck without the required options
-      # they would get passed as nil and overwrite EndpointsStack's default options causing an ArgumentError
       yellow_states = options[:yellow_states]
       reset_time = options[:reset_time]
-      # End modification
+
       @health_check = options.delete(:health_check)
 
       @stack = EndpointsStack.new(endpoints,yellow_states,reset_time)
-      @counter = rand(0xffff)
+      @counter = rand(0xffff) % endpoints.size
+      @last_size = endpoints.size
     end
 
     def next
@@ -114,8 +108,10 @@ module RightSupport::Net::Balancing
       return nil if endpoints.empty?
       
       # Selection of the next endpoint using RoundRobin
-      @counter += 1
-      i = @counter % endpoints.size      
+      @counter += 1 unless endpoints.size < @last_size
+      @counter = 0 if @counter == endpoints.size
+      i = @counter % endpoints.size
+      @last_size = endpoints.size
       
       # Returns false or true, depending on whether EP is yellow or not
       [ endpoints[i][0], endpoints[i][1][:n_level] != 0 ]

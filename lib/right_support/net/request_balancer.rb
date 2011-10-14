@@ -112,7 +112,7 @@ module RightSupport::Net
         raise ArgumentError, ":health_check callback must accept one parameters"
       end
 
-      @endpoints = endpoints.shuffle
+      @endpoints = endpoints
     end
 
     # Perform a request.
