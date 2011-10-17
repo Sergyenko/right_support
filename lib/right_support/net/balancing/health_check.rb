@@ -110,11 +110,10 @@ module RightSupport::Net::Balancing
       # Selection of the next endpoint using RoundRobin
       @counter += 1 unless endpoints.size < @last_size
       @counter = 0 if @counter == endpoints.size
-      i = @counter % endpoints.size
       @last_size = endpoints.size
       
       # Returns false or true, depending on whether EP is yellow or not
-      [ endpoints[i][0], endpoints[i][1][:n_level] != 0 ]
+      [ endpoints[@counter][0], endpoints[@counter][1][:n_level] != 0 ]
     end
 
     def good(endpoint, t0, t1)
