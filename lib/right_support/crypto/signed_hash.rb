@@ -15,18 +15,28 @@ module RightSupport::Crypto
       duck_type_check
     end
 
-    def sign
+    def sign(expires_at)
       raise ArgumentError, "Cannot sign; missing private_key" unless @private_key
-      x = @private_key.private_encrypt( digest( encode( canonicalize(@hash) ) ) )
-      x
+      raise ArgumentError, "expires_at must be a Time in the future" unless time_check(expires_at)
+
+      metadata = {:expires_at => expires_at}
+      @private_key.private_encrypt( digest( encode( canonicalize( frame(@hash, metadata) ) ) ) )
     end
 
-    def verify(signature)
+    def verify!(signature, expires_at)
       raise ArgumentError, "Cannot verify; missing public_key" unless @public_key
-      expected = digest( encode( canonicalize(@hash) ) )
+
+      metadata = {:expires_at => expires_at}
+      expected = digest( encode( canonicalize( frame(@hash, metadata) ) ) )
       actual = @public_key.public_decrypt(signature)
-      actual == expected
-    rescue OpenSSL::PKey::PKeyError
+      raise SecurityError, "Signature mismatch: expected #{expected}, got #{actual}" unless actual == expected
+      raise SecurityError, "The signature has expired (or expires_at is not a Time)" unless time_check(expires_at)
+    end
+
+    def verify(signature, expires_at)
+      verify!(signature, expires_at)
+      true
+    rescue Exception => e
       false
     end
 
@@ -53,6 +63,14 @@ module RightSupport::Crypto
       end
     end
 
+    def time_check(t)
+      t.is_a?(Time) && (t >= Time.now)
+    end
+
+    def frame(data, metadata) # :nodoc:
+      {:data => data, :metadata => metadata}
+    end
+
     def digest(input) # :nodoc:
       @digest.new.update(input).digest
     end
@@ -64,26 +82,43 @@ module RightSupport::Crypto
     def canonicalize(input) # :nodoc:
       case input
         when Hash
+          # Hash is the only complex case. We canonicalize a Hash as an Array of pairs, each of which
+          # consists of one key and one value. The ordering of the pairs is consistent with the
+          # ordering of the keys.
           output = Array.new
-          ordered_keys = input.keys.sort
+
+          # First, transform the original input hash into something that has canonicalized keys
+          # (which should make them sortable, too). Also canonicalize the values while we are
+          # at it...
+          sortable_input = {}
+          input.each { |k,v| sortable_input[canonicalize(k)] = canonicalize(v) }
+
+          # Sort the keys; guard this operation so we can raise an intelligent error if
+          # something is still not sortable even after canonicalization.
+          begin
+            ordered_keys = sortable_input.keys.sort
+          rescue Exception => e
+            msg = "SignedHash requires sortable hash keys; cannot sort #{sortable_input.keys.inspect} " +
+                  "due to #{e.class.name}: #{e.message}"
+            e2 = ArgumentError.new(msg)
+            e2.set_backtrace(e.backtrace)
+            raise e2
+          end
+
           ordered_keys.each do |key|
-            output << [ canonicalize(key), canonicalize(input[key]) ]
+            output << [ key, sortable_input[key] ]
           end
         when Array
           output = input.collect { |x| canonicalize(x) }
+        when Time
+          output = input.to_i
+        when Symbol
+          output = input.to_s
         else
           output = input
       end
 
       output
-    rescue ArgumentError, NoMethodError => e
-      if e.message =~ /comparison of|undefined method `<=>'/
-        e2 = ArgumentError.new("SignedHash requires sortable hashes and arrays; cannot sort #{input.inspect}")
-        e2.set_backtrace(e.backtrace)
-        raise e2
-      else
-        raise e
-      end
     end
   end
 end
