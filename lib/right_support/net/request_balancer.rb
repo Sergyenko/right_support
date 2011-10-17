@@ -173,10 +173,10 @@ module RightSupport::Net
           complete = true
           break
         rescue Exception => e
-          @policy.bad(endpoint, t0, Time.now)
           if to_raise = handle_exception(endpoint, e)
             raise(to_raise)
           else
+            @policy.bad(endpoint, t0, Time.now)
             exceptions << e
           end
         end

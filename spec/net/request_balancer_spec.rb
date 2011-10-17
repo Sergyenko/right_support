@@ -241,7 +241,7 @@ describe RightSupport::Net::RequestBalancer do
       end
 
       it 'does not retry ArgumentError and other program errors' do
-
+        pending
       end
 
       it 'retries HTTP timeouts' do
@@ -255,9 +255,35 @@ describe RightSupport::Net::RequestBalancer do
         codes = [401, 402, 403, 404, 405, 406, 407, 409]
         codes.each do |code|
           lambda do
-            rb.request { |l| raise MockHttpError.new(code) }
+            rb.request { |l| raise MockHttpError.new(nil, code) }
           end.should raise_error(MockHttpError)
         end
+      end
+      
+      it 'does mark endpoints as bad if they encounter retryable errors' do
+        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :policy => RightSupport::Net::Balancing::HealthCheck, :health_check => false)
+        expect = rb.get_stats
+        codes = [401, 402, 403, 404, 405, 406, 407, 408, 409]
+        codes.each do |code|
+          lambda do
+            rb.request { |l| raise MockHttpError.new(nil, code) }
+          end.should raise_error
+        end
+
+        rb.get_stats.should_not == expect
+      end
+
+      it 'does not mark endpoints as bad if they raise fatal errors' do
+        rb = RightSupport::Net::RequestBalancer.new([1,2,3], :policy => RightSupport::Net::Balancing::HealthCheck, :health_check => false)
+        expect = rb.get_stats
+        codes = [401, 402, 403, 404, 405, 406, 407, 409]
+        codes.each do |code|
+          lambda do
+            rb.request { |l| raise MockHttpError.new(nil, code) }
+          end.should raise_error
+        end
+
+        rb.get_stats.should == expect
       end
     end
 
